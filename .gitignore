@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+*.pyo
+*.pyd
+*.pdb
+*.so
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+
+# Configuración y variables de entorno
+.env
+.env.*
+
+# Node.js
+node_modules/
+.next/
+
+# Docker
+postgres_data/
+
+# VSCode y PyCharm
+.vscode/
+.idea/
+
+# Testing y cache
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Archivos temporales y logs
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+# Bases de datos locales
+*.db
+*.sqlite*
+
+# macOS
+.DS_Store
+
+# Otros
+.tausestack_storage/
+.tmp_test_storage/

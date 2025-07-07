@@ -1,0 +1,224 @@
+{
+  "id": "advanced-dashboard",
+  "metadata": {
+    "name": "Advanced Dashboard",
+    "description": "Dashboard avanzado con múltiples componentes shadcn/ui",
+    "version": "1.0.0",
+    "author": "TauseStack Team",
+    "tags": [
+      "dashboard",
+      "analytics",
+      "shadcn",
+      "advanced"
+    ],
+    "category": "dashboard",
+    "subcategory": null,
+    "preview_image": null,
+    "demo_url": null,
+    "documentation_url": null,
+    "created_at": "2025-07-01T16:36:31.980756",
+    "updated_at": "2025-07-01T16:36:31.980756"
+  },
+  "configuration": {
+    "framework": "nextjs",
+    "ui_library": "shadcn",
+    "typescript": true,
+    "tailwind": true,
+    "dark_mode": true,
+    "responsive": true,
+    "pwa": false,
+    "seo_optimized": true
+  },
+  "dependencies": {
+    "npm_packages": [
+      "recharts",
+      "date-fns",
+      "lucide-react"
+    ],
+    "python_packages": [],
+    "shadcn_components": [
+      "card",
+      "table",
+      "badge",
+      "button",
+      "dialog",
+      "select"
+    ],
+    "external_apis": []
+  },
+  "pages": [
+    {
+      "name": "dashboard",
+      "path": "/",
+      "components": [
+        {
+          "id": "header",
+          "type": "container",
+          "variant": "default",
+          "props": {},
+          "styles": {},
+          "children": [
+            {
+              "id": "title",
+              "type": "container",
+              "variant": "default",
+              "props": {
+                "className": "mb-8"
+              },
+              "styles": {},
+              "children": [],
+              "conditional_rendering": null,
+              "data_binding": null
+            }
+          ],
+          "conditional_rendering": null,
+          "data_binding": null
+        },
+        {
+          "id": "stats-grid",
+          "type": "grid",
+          "variant": "default",
+          "props": {
+            "className": "grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+          },
+          "styles": {},
+          "children": [
+            {
+              "id": "revenue-card",
+              "type": "card",
+              "variant": "default",
+              "props": {
+                "title": "Total Revenue",
+                "value": "$45,231.89",
+                "change": "+20.1%",
+                "trend": "up"
+              },
+              "styles": {},
+              "children": [],
+              "conditional_rendering": null,
+              "data_binding": null
+            },
+            {
+              "id": "subscriptions-card",
+              "type": "card",
+              "variant": "default",
+              "props": {
+                "title": "Subscriptions",
+                "value": "2,350",
+                "change": "+180.1%",
+                "trend": "up"
+              },
+              "styles": {},
+              "children": [],
+              "conditional_rendering": null,
+              "data_binding": null
+            },
+            {
+              "id": "sales-card",
+              "type": "card",
+              "variant": "default",
+              "props": {
+                "title": "Sales",
+                "value": "12,234",
+                "change": "+19%",
+                "trend": "up"
+              },
+              "styles": {},
+              "children": [],
+              "conditional_rendering": null,
+              "data_binding": null
+            },
+            {
+              "id": "active-users-card",
+              "type": "card",
+              "variant": "default",
+              "props": {
+                "title": "Active Now",
+                "value": "573",
+                "change": "+201",
+                "trend": "up"
+              },
+              "styles": {},
+              "children": [],
+              "conditional_rendering": null,
+              "data_binding": null
+            }
+          ],
+          "conditional_rendering": null,
+          "data_binding": null
+        },
+        {
+          "id": "charts-section",
+          "type": "grid",
+          "variant": "default",
+          "props": {
+            "className": "grid-cols-1 lg:grid-cols-2 gap-8 mb-8"
+          },
+          "styles": {},
+          "children": [
+            {
+              "id": "overview-chart",
+              "type": "card",
+              "variant": "default",
+              "props": {
+                "title": "Overview",
+                "description": "Revenue over time"
+              },
+              "styles": {},
+              "children": [],
+              "conditional_rendering": null,
+              "data_binding": null
+            },
+            {
+              "id": "recent-sales",
+              "type": "card",
+              "variant": "default",
+              "props": {
+                "title": "Recent Sales",
+                "description": "You made 265 sales this month"
+              },
+              "styles": {},
+              "children": [],
+              "conditional_rendering": null,
+              "data_binding": null
+            }
+          ],
+          "conditional_rendering": null,
+          "data_binding": null
+        },
+        {
+          "id": "data-table",
+          "type": "table",
+          "variant": "default",
+          "props": {
+            "caption": "A list of your recent invoices",
+            "headers": [
+              "Invoice",
+              "Status",
+              "Method",
+              "Amount"
+            ]
+          },
+          "styles": {},
+          "children": [],
+          "conditional_rendering": null,
+          "data_binding": null
+        }
+      ],
+      "layout": "default",
+      "metadata": {},
+      "auth_required": false
+    }
+  ],
+  "components": [],
+  "theme": {
+    "primary": "#0f172a",
+    "secondary": "#64748b",
+    "accent": "#3b82f6",
+    "background": "#ffffff",
+    "foreground": "#0f172a"
+  },
+  "environment_variables": [],
+  "database_schema": null,
+  "api_routes": []
+}

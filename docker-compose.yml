@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  api-gateway:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - TAUSESTACK_ENVIRONMENT=development
+      - TAUSESTACK_TENANT_ID=default
+      - TAUSESTACK_REDIS_URL=redis://redis:6379/0
+      - TAUSESTACK_STORAGE_BACKEND=local
+      - TAUSESTACK_CACHE_BACKEND=redis
+      - TAUSESTACK_NOTIFY_BACKEND=console
+    depends_on:
+      - redis
+      - postgres
+    volumes:
+      - ./tausestack:/app/tausestack
+      - ./data:/app/data
+    command: python -m tausestack.services.api_gateway
+
+  # Analytics Service
+  analytics:
+    build: .
+    ports:
+      - "8001:8001"
+    environment:
+      - TAUSESTACK_ENVIRONMENT=development
+      - TAUSESTACK_TENANT_ID=default
+      - TAUSESTACK_REDIS_URL=redis://redis:6379/0
+      - TAUSESTACK_DATABASE_URL=postgresql://tausestack:tausestack@postgres:5432/tausestack
+    depends_on:
+      - redis
+      - postgres
+    volumes:
+      - ./tausestack:/app/tausestack
+    command: python -m tausestack.services.analytics.api.main
+
+  # Communications Service
+  communications:
+    build: .
+    ports:
+      - "8002:8002"
+    environment:
+      - TAUSESTACK_ENVIRONMENT=development
+      - TAUSESTACK_TENANT_ID=default
+      - TAUSESTACK_REDIS_URL=redis://redis:6379/0
+      - TAUSESTACK_NOTIFY_BACKEND=console
+    depends_on:
+      - redis
+    volumes:
+      - ./tausestack:/app/tausestack
+    command: python -m tausestack.services.communications.api.main
+
+  # Billing Service
+  billing:
+    build: .
+    ports:
+      - "8003:8003"
+    environment:
+      - TAUSESTACK_ENVIRONMENT=development
+      - TAUSESTACK_TENANT_ID=default
+      - TAUSESTACK_DATABASE_URL=postgresql://tausestack:tausestack@postgres:5432/tausestack
+    depends_on:
+      - postgres
+    volumes:
+      - ./tausestack:/app/tausestack
+    command: python -m tausestack.services.billing.api.main
+
+  # Templates Service
+  templates:
+    build: .
+    ports:
+      - "8004:8004"
+    environment:
+      - TAUSESTACK_ENVIRONMENT=development
+      - TAUSESTACK_TENANT_ID=default
+      - TAUSESTACK_STORAGE_BACKEND=local
+    volumes:
+      - ./tausestack:/app/tausestack
+      - ./data:/app/data
+    command: python -m tausestack.services.templates.api.main
+
+  # AI Services
+  ai-services:
+    build: .
+    ports:
+      - "8005:8005"
+    environment:
+      - TAUSESTACK_ENVIRONMENT=development
+      - TAUSESTACK_TENANT_ID=default
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    volumes:
+      - ./tausestack:/app/tausestack
+    command: python -m tausestack.services.ai_services.api.main
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  # PostgreSQL for data persistence
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=tausestack
+      - POSTGRES_USER=tausestack
+      - POSTGRES_PASSWORD=tausestack
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+
+  # Nginx for load balancing (optional)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - api-gateway
+      - analytics
+      - communications
+      - billing
+      - templates
+      - ai-services
+    profiles:
+      - production
+
+volumes:
+  redis_data:
+  postgres_data:

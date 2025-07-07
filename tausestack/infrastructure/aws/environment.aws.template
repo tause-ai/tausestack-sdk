@@ -1,0 +1,166 @@
+# =============================================================================
+# TAUSESTACK AWS PRODUCTION ENVIRONMENT
+# =============================================================================
+# Copy this file to .env.production and configure your AWS values
+
+# =============================================================================
+# CORE CONFIGURATION
+# =============================================================================
+NODE_ENV=production
+LOG_LEVEL=info
+PORT=8000
+WORKERS=4
+
+# =============================================================================
+# AWS DOMAIN CONFIGURATION
+# =============================================================================
+# Base domain for multi-tenant setup
+TAUSESTACK_BASE_DOMAIN=tause.pro
+TAUSESTACK_MULTI_TENANT_MODE=true
+
+# AWS Application Load Balancer URLs
+API_GATEWAY_URL=https://api.tause.pro
+ANALYTICS_SERVICE_URL=https://analytics.tause.pro
+COMMUNICATIONS_SERVICE_URL=https://communications.tause.pro
+BILLING_SERVICE_URL=https://billing.tause.pro
+MCP_SERVER_URL=https://mcp.tause.pro
+AI_SERVICES_URL=https://ai.tause.pro
+
+# Frontend URL
+FRONTEND_URL=https://app.tause.pro
+
+# =============================================================================
+# AWS DATABASE CONFIGURATION
+# =============================================================================
+# RDS PostgreSQL
+DATABASE_URL=postgresql://tausestack:${DB_PASSWORD}@tausestack-db.cluster-xyz.us-east-1.rds.amazonaws.com:5432/tausestack
+DATABASE_MAX_CONNECTIONS=20
+DATABASE_SSL_MODE=require
+
+# =============================================================================
+# AWS CACHE CONFIGURATION
+# =============================================================================
+# ElastiCache Redis
+REDIS_URL=redis://tausestack-cache.abc123.cache.amazonaws.com:6379
+REDIS_MAX_CONNECTIONS=10
+REDIS_SSL=true
+
+# =============================================================================
+# AWS STORAGE CONFIGURATION
+# =============================================================================
+# S3 Configuration
+AWS_S3_BUCKET=tausestack-storage-prod
+AWS_S3_REGION=us-east-1
+AWS_S3_CDN_URL=https://cdn.tause.pro
+
+# =============================================================================
+# AWS SECRETS MANAGER
+# =============================================================================
+# Secrets Manager Configuration
+AWS_SECRETS_MANAGER_REGION=us-east-1
+TAUSESTACK_SECRETS_PREFIX=tausestack/prod
+
+# =============================================================================
+# AWS AUTHENTICATION
+# =============================================================================
+# Firebase Auth (using AWS Secrets Manager)
+TAUSESTACK_AUTH_BACKEND=firebase
+TAUSESTACK_FIREBASE_PROJECT_ID=tausestack-prod
+# Firebase credentials stored in AWS Secrets Manager:
+# Secret: tausestack/prod/firebase-admin-key
+
+# =============================================================================
+# AWS COMMUNICATION SERVICES
+# =============================================================================
+# SES Configuration
+AWS_SES_REGION=us-east-1
+AWS_SES_SOURCE_EMAIL=noreply@tause.pro
+TAUSESTACK_NOTIFY_BACKEND=ses
+TAUSESTACK_NOTIFY_SES_SOURCE_EMAIL=noreply@tause.pro
+TAUSESTACK_NOTIFY_SES_AWS_REGION=us-east-1
+
+# SNS Configuration (for SMS)
+AWS_SNS_REGION=us-east-1
+
+# =============================================================================
+# AWS AI SERVICES
+# =============================================================================
+# OpenAI API Key (stored in AWS Secrets Manager)
+# Secret: tausestack/prod/openai-api-key
+
+# Anthropic API Key (stored in AWS Secrets Manager)
+# Secret: tausestack/prod/anthropic-api-key
+
+# =============================================================================
+# AWS MONITORING & LOGGING
+# =============================================================================
+# CloudWatch Configuration
+AWS_CLOUDWATCH_LOG_GROUP=tausestack-prod
+AWS_CLOUDWATCH_REGION=us-east-1
+
+# X-Ray Tracing
+AWS_XRAY_TRACING_NAME=tausestack-prod
+AWS_XRAY_DAEMON_ADDRESS=xray-daemon:2000
+
+# =============================================================================
+# AWS SECURITY
+# =============================================================================
+# CORS Configuration for AWS
+CORS_ORIGINS=["https://app.tause.pro","https://admin.tause.pro","https://api.tause.pro"]
+CORS_CREDENTIALS=true
+
+# Rate Limiting
+RATE_LIMIT_PER_MINUTE=100
+RATE_LIMIT_PER_HOUR=1000
+
+# =============================================================================
+# AWS ECS/FARGATE CONFIGURATION
+# =============================================================================
+# Container Configuration
+CONTAINER_MEMORY=2048
+CONTAINER_CPU=1024
+
+# Health Check Configuration
+HEALTH_CHECK_INTERVAL=30
+HEALTH_CHECK_TIMEOUT=10
+HEALTH_CHECK_RETRIES=3
+
+# =============================================================================
+# AWS APPLICATION LOAD BALANCER
+# =============================================================================
+# ALB Health Check Configuration
+ALB_HEALTH_CHECK_PATH=/health
+ALB_HEALTH_CHECK_INTERVAL=30
+ALB_HEALTH_CHECK_TIMEOUT=5
+ALB_HEALTH_CHECK_HEALTHY_THRESHOLD=2
+ALB_HEALTH_CHECK_UNHEALTHY_THRESHOLD=5
+
+# =============================================================================
+# AWS AUTO SCALING
+# =============================================================================
+# ECS Service Auto Scaling
+MIN_CAPACITY=2
+MAX_CAPACITY=10
+TARGET_CPU_UTILIZATION=70
+TARGET_MEMORY_UTILIZATION=80
+
+# =============================================================================
+# AWS BILLING & COST MANAGEMENT
+# =============================================================================
+# Cost allocation tags
+COST_CENTER=tausestack-prod
+ENVIRONMENT=production
+PROJECT=tausestack
+OWNER=devops
+
+# =============================================================================
+# DEVELOPMENT OVERRIDES (NOT USED IN PRODUCTION)
+# =============================================================================
+# These are ignored in production but kept for reference
+DEV_API_GATEWAY_PORT=9001
+DEV_ANALYTICS_PORT=8001
+DEV_COMMUNICATIONS_PORT=8002
+DEV_BILLING_PORT=8003
+DEV_MCP_PORT=8000
+DEV_AI_SERVICES_PORT=8005
+DEV_FRONTEND_PORT=3000 
