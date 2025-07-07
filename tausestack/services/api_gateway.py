@@ -82,6 +82,18 @@ SERVICES_CONFIG = {
         "health_endpoint": "/health",
         "rate_limit": 500,  # Límite más bajo para IA por costos
         "timeout": 60  # Timeout más alto para generación de IA
+    },
+    "admin_api": {
+        "url": "http://localhost:8001",  # Puerto del servicio de administración
+        "health_endpoint": "/health",
+        "rate_limit": 1000,  # Límite alto para administración
+        "timeout": 30
+    },
+    "agent_api": {
+        "url": "http://localhost:8003",  # Puerto del servicio de agentes
+        "health_endpoint": "/health",
+        "rate_limit": 2000,  # Límite alto para agentes
+        "timeout": 45  # Timeout más alto para ejecución de agentes
     }
 }
 
@@ -458,33 +470,60 @@ async def templates_proxy(path: str, request: Request):
         logger.error(f"Templates proxy error: {str(e)}")
         raise HTTPException(status_code=500, detail="Templates service error")
 
-@app.api_route("/ai/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
-async def ai_services_proxy(path: str, request: Request):
-    """Proxy para AI Services con rate limiting especial."""
-    tenant_id = get_tenant_id(request)
+@app.api_route("/ai/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
+async def proxy_ai_service(request: Request, path: str):
+    """Proxy para AI Services"""
     
-    # Rate limiting más estricto para IA
-    if not check_rate_limit(tenant_id, "ai_services"):
-        raise HTTPException(
-            status_code=429, 
-            detail=f"Rate limit exceeded for tenant {tenant_id} on AI services"
+    # URL del servicio de AI
+    ai_service_url = "http://localhost:8002"
+    target_url = f"{ai_service_url}/ai/{path}"
+    
+    # Preparar headers
+    headers = dict(request.headers)
+    headers.pop("host", None)  # Remover host header
+    
+    # Obtener datos del request
+    body = await request.body()
+    
+    # Hacer la petición al servicio
+    async with httpx.AsyncClient() as client:
+        response = await client.request(
+            method=request.method,
+            url=target_url,
+            headers=headers,
+            content=body,
+            timeout=30.0
         )
     
-    # Obtener cuerpo del request
+    # Retornar respuesta
+    return Response(
+        content=response.content,
+        status_code=response.status_code,
+        headers=dict(response.headers)
+    )
+
+@app.api_route("/agents/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def agent_api_proxy(path: str, request: Request, current_user: User = Depends(require_user(required_roles=["admin"]))):
+    """Proxy para el servicio de agentes. Requiere rol admin."""
+    tenant_id = get_tenant_id(request)
+    
+    # Rate limiting para agentes
+    if not check_rate_limit(tenant_id, "agent_api"):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded for agent API")
+    
+    # Preparar datos del request
     body = await request.body() if request.method in ["POST", "PUT", "PATCH"] else None
-    
-    # Headers del request
     headers = dict(request.headers)
-    
-    # Query parameters
     params = dict(request.query_params)
     
-    # Registrar uso por tenant
-    gateway_metrics["tenant_usage"][tenant_id] += 1
+    # Agregar información del usuario admin
+    headers["X-Admin-User"] = current_user.id
+    headers["X-Admin-Email"] = current_user.email
+    headers["X-Tenant-ID"] = tenant_id
     
     try:
         result = await forward_request(
-            "ai_services", 
+            "agent_api", 
             f"/{path}", 
             request.method, 
             headers, 
@@ -495,13 +534,88 @@ async def ai_services_proxy(path: str, request: Request):
         return Response(
             content=result["content"],
             status_code=result["status_code"],
-            headers={k: v for k, v in result["headers"].items() if k.lower() not in ['content-encoding', 'content-length']},
-            media_type="application/json"
+            headers={k: v for k, v in result["headers"].items() if k.lower() not in ['content-length', 'transfer-encoding']}
         )
         
     except Exception as e:
-        logger.error(f"AI Services proxy error for tenant {tenant_id}: {str(e)}")
-        raise
+        logger.error(f"Agent API proxy error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Agent API service error")
+
+@app.api_route("/admin/apis/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def admin_api_proxy(path: str, request: Request, current_user: User = Depends(require_user(required_roles=["admin"]))):
+    """Proxy para el servicio de administración de APIs. Requiere rol admin."""
+    tenant_id = get_tenant_id(request)
+    
+    # Rate limiting para administración
+    if not check_rate_limit(tenant_id, "admin_api"):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded for admin API")
+    
+    # Preparar datos del request
+    body = await request.body() if request.method in ["POST", "PUT", "PATCH"] else None
+    headers = dict(request.headers)
+    params = dict(request.query_params)
+    
+    # Agregar información del usuario admin
+    headers["X-Admin-User"] = current_user.id
+    headers["X-Admin-Email"] = current_user.email
+    
+    try:
+        result = await forward_request(
+            "admin_api", 
+            f"/admin/apis/{path}", 
+            request.method, 
+            headers, 
+            body, 
+            params
+        )
+        
+        return Response(
+            content=result["content"],
+            status_code=result["status_code"],
+            headers={k: v for k, v in result["headers"].items() if k.lower() not in ['content-length', 'transfer-encoding']}
+        )
+        
+    except Exception as e:
+        logger.error(f"Admin API proxy error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Admin API service error")
+
+@app.api_route("/admin/dashboard/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def admin_dashboard_proxy(path: str, request: Request, current_user: User = Depends(require_user(required_roles=["admin"]))):
+    """Proxy para el dashboard administrativo. Requiere rol admin."""
+    tenant_id = get_tenant_id(request)
+    
+    # Rate limiting para administración
+    if not check_rate_limit(tenant_id, "admin_api"):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded for admin API")
+    
+    # Preparar datos del request
+    body = await request.body() if request.method in ["POST", "PUT", "PATCH"] else None
+    headers = dict(request.headers)
+    params = dict(request.query_params)
+    
+    # Agregar información del usuario admin
+    headers["X-Admin-User"] = current_user.id
+    headers["X-Admin-Email"] = current_user.email
+    
+    try:
+        result = await forward_request(
+            "admin_api", 
+            f"/admin/dashboard/{path}", 
+            request.method, 
+            headers, 
+            body, 
+            params
+        )
+        
+        return Response(
+            content=result["content"],
+            status_code=result["status_code"],
+            headers={k: v for k, v in result["headers"].items() if k.lower() not in ['content-length', 'transfer-encoding']}
+        )
+        
+    except Exception as e:
+        logger.error(f"Admin Dashboard proxy error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Admin Dashboard service error")
 
 # === RUTAS DE ADMINISTRACIÓN ===
 
@@ -550,7 +664,7 @@ if __name__ == "__main__":
         port=9001,
         reload=True,
         log_level="info"
-    )
+    ) 
 
 # === FRONTEND ESTÁTICO (AL FINAL PARA NO CAPTURAR RUTAS API) ===
 
