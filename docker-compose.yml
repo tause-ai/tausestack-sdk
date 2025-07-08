@@ -97,6 +97,42 @@ services:
       - ./tausestack:/app/tausestack
     command: python -m tausestack.services.ai_services.api.main
 
+  # Builder API Service
+  builder-api:
+    build: .
+    ports:
+      - "8006:8006"
+    environment:
+      - TAUSESTACK_ENVIRONMENT=development
+      - TAUSESTACK_TENANT_ID=default
+      - TAUSESTACK_STORAGE_BACKEND=local
+      - TAUSESTACK_CACHE_BACKEND=redis
+      - TAUSESTACK_REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - templates
+    volumes:
+      - ./tausestack:/app/tausestack
+      - ./data:/app/data
+    command: python -m tausestack.services.builder_api
+
+  # Agent Team API Service
+  agent-team-api:
+    build: .
+    ports:
+      - "8007:8007"
+    environment:
+      - TAUSESTACK_ENVIRONMENT=development
+      - TAUSESTACK_TENANT_ID=default
+      - TAUSESTACK_DATABASE_URL=postgresql://tausestack:tausestack@postgres:5432/tausestack
+      - TAUSESTACK_REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./tausestack:/app/tausestack
+    command: python -m tausestack.services.agent_team_api
+
   # Redis for caching
   redis:
     image: redis:7-alpine
@@ -133,6 +169,8 @@ services:
       - billing
       - templates
       - ai-services
+      - builder-api
+      - agent-team-api
     profiles:
       - production
 

@@ -171,11 +171,36 @@ else
     echo -e "${RED}❌ API Gateway: Error (HTTP $API_STATUS)${NC}"
 fi
 
+echo -e "${BLUE}Probando Builder API...${NC}"
+BUILDER_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://tausestack.dev/v1/templates/list)
+if [ "$BUILDER_STATUS" = "200" ]; then
+    echo -e "${GREEN}✅ Builder API: OK (HTTP $BUILDER_STATUS)${NC}"
+else
+    echo -e "${RED}❌ Builder API: Error (HTTP $BUILDER_STATUS)${NC}"
+fi
+
+echo -e "${BLUE}Probando Templates API...${NC}"
+TEMPLATES_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://tausestack.dev/templates/health)
+if [ "$TEMPLATES_STATUS" = "200" ]; then
+    echo -e "${GREEN}✅ Templates API: OK (HTTP $TEMPLATES_STATUS)${NC}"
+else
+    echo -e "${RED}❌ Templates API: Error (HTTP $TEMPLATES_STATUS)${NC}"
+fi
+
 # Resumen final
 echo -e "\n${GREEN}🎉 DEPLOYMENT COMPLETADO${NC}"
 echo -e "${GREEN}========================${NC}"
 echo -e "${GREEN}✅ Frontend desplegado en: https://tausestack.dev/${NC}"
 echo -e "${GREEN}✅ API Gateway disponible en: https://tausestack.dev/api${NC}"
+echo -e "${GREEN}✅ Servicios incluidos:${NC}"
+echo -e "${GREEN}   • API Gateway (8000)${NC}"
+echo -e "${GREEN}   • Analytics (8001)${NC}"
+echo -e "${GREEN}   • Communications (8002)${NC}"
+echo -e "${GREEN}   • Billing (8003)${NC}"
+echo -e "${GREEN}   • Templates (8004)${NC}"
+echo -e "${GREEN}   • AI Services (8005)${NC}"
+echo -e "${GREEN}   • Builder API (8006)${NC}"
+echo -e "${GREEN}   • Agent Team API (8007)${NC}"
 echo -e "${GREEN}✅ Imagen Docker: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPOSITORY_NAME:latest${NC}"
 echo -e "${GREEN}✅ ECS Service: $SERVICE_NAME${NC}"
 echo -e "${GREEN}✅ Tareas ejecutándose: $RUNNING_COUNT/$DESIRED_COUNT${NC}"

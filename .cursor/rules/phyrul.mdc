@@ -47,4 +47,53 @@
 description:
 globs:
 alwaysApply: true
----
+
+# TauseStack Development Rules
+
+## Architecture Patterns
+- All services MUST be multi-tenant by default
+- Use tenant_id parameter in all database operations
+- Follow the service structure: api/, core/, models/, tests/
+- Use FastAPI + Pydantic for all new services
+- Integrate with existing ts.storage, ts.cache, ts.analytics
+
+## Code Structure
+- Place new services in tausestack/services/
+- Use consistent error handling with TauseStackError base class
+- All async functions for database and external API calls
+- Include proper type hints with Python 3.9+ syntax
+
+## Integration Guidelines
+- For e-commerce: Integrate with Saleor, use TauseStack for tenant management
+- For AI agents: Build on ts.ai and MCP, use CrewAI only for orchestration
+- For bots: Custom development with TauseStack AI services
+- For Colombia features: Use ts.colombia module, extend if needed
+
+## Testing & Documentation
+- Include working examples in examples/ directory
+- Test with real tenant data using demo tenant
+- Document Colombian-specific integrations (PSE, Wompi, geo data)
+- Always include analytics tracking for new features
+
+## File Organization
+/tausestack/
+  /services/
+    /new_service/
+      /api/ - FastAPI routes
+      /core/ - Business logic
+      /models/ - Pydantic models
+      /tests/ - Unit tests
+  /examples/ - Working demos
+  /docs/ - Documentation
+
+## Colombian Market Requirements
+- Support COP currency in financial operations
+- Include validations for Colombian documents (cédula, NIT)
+- Integrate with local payment methods (PSE, Nequi, Daviplata)
+- Use Colombian geographical data (departments, municipalities)
+
+## Multi-tenant Considerations
+- Isolate data by tenant_id in all operations
+- Use tenant-scoped configurations and storage
+- Track usage and analytics per tenant
+- Implement rate limiting per tenant---

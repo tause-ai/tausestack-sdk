@@ -310,6 +310,148 @@ class AdminAPIService:
                 "last_check": max([api.last_check for api in self.api_configs.values()]) if self.api_configs else datetime.now(),
                 "health_checks_today": len(recent_checks)
             }
+
+        @self.app.get("/admin/dashboard/metrics")
+        async def get_dashboard_metrics():
+            """Obtener métricas del dashboard en tiempo real"""
+            try:
+                # Simular datos reales (en producción vendría de bases de datos y logs)
+                import random
+                import time
+                
+                # Datos base con variación para simular tiempo real
+                base_calls = 2847392
+                variation = random.randint(-50000, 50000)
+                
+                metrics = {
+                    "apiCallsToday": base_calls + variation,
+                    "apiCallsGrowth": random.randint(8, 15),
+                    "activeTenants": random.randint(125, 130),
+                    "newTenantsWeek": random.randint(6, 10),
+                    "revenueMTD": random.randint(12000, 15000),
+                    "revenueGrowth": random.randint(18, 28),
+                    "uptime": round(random.uniform(99.5, 99.9), 1),
+                    "incidents": random.randint(1, 5),
+                    "requestsPerSecond": random.randint(750, 950),
+                    "avgResponseTime": random.randint(70, 120),
+                    "errorRate": round(random.uniform(0.1, 0.8), 1),
+                    "timestamp": int(time.time())
+                }
+                
+                return metrics
+                
+            except Exception as e:
+                print(f"Error getting dashboard metrics: {e}")
+                return {"error": str(e)}, 500
+
+        @self.app.get("/admin/dashboard/top-endpoints")
+        async def get_top_endpoints():
+            """Obtener los endpoints más utilizados"""
+            try:
+                endpoints = [
+                    {"path": "/api/v1/ai/generate", "calls": 234829, "icon": "🔥"},
+                    {"path": "/api/v1/auth/login", "calls": 189472, "icon": "🔐"},
+                    {"path": "/api/v1/storage/upload", "calls": 156394, "icon": "💾"},
+                    {"path": "/api/v1/analytics/track", "calls": 98847, "icon": "📊"},
+                    {"path": "/api/v1/colombia/nit", "calls": 45283, "icon": "🇨🇴"},
+                    {"path": "/api/v1/notifications/send", "calls": 34829, "icon": "📧"},
+                    {"path": "/api/v1/payments/process", "calls": 28947, "icon": "💳"},
+                    {"path": "/api/v1/templates/render", "calls": 23847, "icon": "📄"}
+                ]
+                
+                # Agregar variación para simular tiempo real
+                import random
+                for endpoint in endpoints:
+                    endpoint["calls"] += random.randint(-1000, 1000)
+                    
+                return endpoints
+                
+            except Exception as e:
+                print(f"Error getting top endpoints: {e}")
+                return {"error": str(e)}, 500
+
+        @self.app.get("/admin/dashboard/top-tenants")
+        async def get_top_tenants():
+            """Obtener los tenants con más consumo"""
+            try:
+                tenants = [
+                    {"name": "Acme Corp", "plan": "Enterprise", "calls": 847392, "revenue": 2847, "badge": "🏆"},
+                    {"name": "DevCorp", "plan": "Pro", "calls": 234829, "revenue": 847, "badge": "🥈"},
+                    {"name": "StartupABC", "plan": "Starter", "calls": 89472, "revenue": 29, "badge": "🥉"},
+                    {"name": "TechFlow", "plan": "Pro", "calls": 67829, "revenue": 245, "badge": "🔥"},
+                    {"name": "CloudBiz", "plan": "Enterprise", "calls": 45283, "revenue": 1567, "badge": "💼"},
+                    {"name": "AppMakers", "plan": "Starter", "calls": 23847, "revenue": 49, "badge": "🚀"}
+                ]
+                
+                return tenants
+                
+            except Exception as e:
+                print(f"Error getting top tenants: {e}")
+                return {"error": str(e)}, 500
+
+        @self.app.get("/admin/dashboard/recent-activity")
+        async def get_recent_activity():
+            """Obtener actividad reciente del sistema"""
+            try:
+                import random
+                from datetime import datetime, timedelta
+                
+                activity_templates = [
+                    {"type": "new_tenant", "message": "New tenant: {name} registered", "icon": "🆕"},
+                    {"type": "alert", "message": "High usage alert: {name} exceeded 95%", "icon": "⚠️"},
+                    {"type": "plugin", "message": "Plugin approved: {name}", "icon": "✅"},
+                    {"type": "maintenance", "message": "System maintenance completed", "icon": "🔧"},
+                    {"type": "support", "message": "Support ticket resolved: Tenant #{number}", "icon": "💬"},
+                    {"type": "payment", "message": "Payment processed for {name}", "icon": "💳"},
+                    {"type": "upgrade", "message": "{name} upgraded to {plan} plan", "icon": "⬆️"},
+                    {"type": "integration", "message": "New integration: {name} API connected", "icon": "🔗"},
+                    {"type": "backup", "message": "Database backup completed successfully", "icon": "💾"},
+                    {"type": "security", "message": "Security scan completed - No issues found", "icon": "🛡️"}
+                ]
+                
+                companies = ["StartupXYZ", "TechCorp", "DevFlow", "CloudTech", "AppBuild", "DataFlow"]
+                plugins = ["HubSpot Connector", "Slack Integration", "Zoom API", "WhatsApp Business"]
+                plans = ["Pro", "Enterprise", "Premium"]
+                integrations = ["Salesforce", "Google Workspace", "Microsoft Teams", "Shopify"]
+                
+                activities = []
+                for i in range(10):
+                    template = random.choice(activity_templates)
+                    activity = template.copy()
+                    
+                    # Personalizar mensaje según tipo
+                    if "{name}" in activity["message"]:
+                        if template["type"] == "new_tenant" or template["type"] == "alert":
+                            activity["message"] = activity["message"].format(name=random.choice(companies))
+                        elif template["type"] == "plugin":
+                            activity["message"] = activity["message"].format(name=random.choice(plugins))
+                        elif template["type"] == "payment":
+                            activity["message"] = activity["message"].format(name=random.choice(companies))
+                        elif template["type"] == "upgrade":
+                            activity["message"] = activity["message"].format(
+                                name=random.choice(companies), 
+                                plan=random.choice(plans)
+                            )
+                        elif template["type"] == "integration":
+                            activity["message"] = activity["message"].format(name=random.choice(integrations))
+                            
+                    if "{number}" in activity["message"]:
+                        activity["message"] = activity["message"].format(number=random.randint(100, 999))
+                        
+                    # Generar timestamp relativo
+                    minutes_ago = random.randint(1, 120)
+                    if minutes_ago < 60:
+                        activity["time"] = f"{minutes_ago}m ago"
+                    else:
+                        activity["time"] = f"{minutes_ago // 60}h ago"
+                        
+                    activities.append(activity)
+                
+                return activities
+                
+            except Exception as e:
+                print(f"Error getting recent activity: {e}")
+                return {"error": str(e)}, 500
     
     async def _test_connection(self, api_id: str) -> HealthCheckResult:
         """Probar conexión con una API específica"""

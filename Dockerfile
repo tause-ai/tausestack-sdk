@@ -58,8 +58,11 @@ ENV TAUSESTACK_ENVIRONMENT=production
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Expose port
-EXPOSE 8000
+# Expose all service ports
+EXPOSE 8000 8001 8002 8003 8004 8005 8006 8007
 
-# Start command
-CMD ["uvicorn", "tausestack.services.api_gateway:app", "--host", "0.0.0.0", "--port", "8000"]
+# Copy service startup script
+COPY start_services.py /app/
+
+# Start command - run all services
+CMD ["python", "/app/start_services.py"]

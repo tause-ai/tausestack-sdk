@@ -176,14 +176,9 @@ class AgentAPIService:
             )
             
             # Crear agente
-            agent = TauseStackAgent(
-                config=config,
-                api_base_url="http://localhost:9001",
-                storage_path=".tausestack_storage"
-            )
+            agent = self.agent_manager.create_agent(config)
             
             self.active_agents[config.agent_id] = agent
-            await self.agent_manager.add_agent(agent)
             
         except Exception as e:
             print(f"Error recreating agent {agent_data.get('agent_id', 'unknown')}: {e}")
@@ -198,7 +193,7 @@ class AgentAPIService:
                     'tenant_id': agent.config.tenant_id,
                     'name': agent.config.name,
                     'role_type': agent.config.role.type.value if hasattr(agent.config.role, 'type') else 'custom',
-                    'custom_role': agent.config.role.dict() if hasattr(agent.config.role, 'dict') else None,
+                    'custom_role': agent.config.role.to_dict() if hasattr(agent.config.role, 'to_dict') else None,
                     'enabled': agent.config.enabled,
                     'custom_instructions': agent.config.custom_instructions,
                     'allowed_tools': agent.config.allowed_tools,
@@ -234,6 +229,18 @@ class AgentAPIService:
     
     def _setup_routes(self):
         """Configurar todas las rutas del API"""
+        
+        @self.app.get("/health")
+        async def health_check():
+            """Health check endpoint"""
+            return {
+                "status": "healthy",
+                "service": "Agent API",
+                "version": "1.0.0",
+                "active_agents": len(self.active_agents),
+                "total_tasks": len(self.task_history),
+                "queue_size": len(self.task_queue)
+            }
         
         @self.app.get("/agents", response_model=List[AgentStatusModel])
         async def list_agents():
@@ -294,15 +301,10 @@ class AgentAPIService:
             )
             
             # Crear agente
-            agent = TauseStackAgent(
-                config=config,
-                api_base_url="http://localhost:9001",
-                storage_path=".tausestack_storage"
-            )
+            agent = self.agent_manager.create_agent(config)
             
             # Registrar
             self.active_agents[agent_id] = agent
-            await self.agent_manager.add_agent(agent)
             await self._save_agents()
             
             # Retornar status
@@ -390,7 +392,7 @@ class AgentAPIService:
                 raise HTTPException(status_code=404, detail="Agente no encontrado")
             
             # Remover del manager y memoria
-            await self.agent_manager.remove_agent(agent_id)
+            self.agent_manager.remove_agent(agent_id)
             del self.active_agents[agent_id]
             await self._save_agents()
             
@@ -504,10 +506,13 @@ class AgentAPIService:
 
 # ========================= STARTUP =========================
 
+# Instancia global para uvicorn
+agent_service = AgentAPIService()
+app = agent_service.app
+
 if __name__ == "__main__":
-    agent_service = AgentAPIService()
     uvicorn.run(
-        agent_service.app,
+        app,
         host="0.0.0.0",
         port=8003,
         log_level="info"
