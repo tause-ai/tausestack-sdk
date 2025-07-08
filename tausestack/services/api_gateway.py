@@ -72,7 +72,7 @@ SERVICES_CONFIG = {
         "timeout": 45
     },
     "templates": {
-        "url": f"{settings.API_GATEWAY_URL}/templates",  # Templates están en el gateway
+        "url": "http://localhost:8004",  # Templates API en puerto 8004
         "health_endpoint": "/health",
         "rate_limit": 10000,  # Aumentar límite para health checks
         "timeout": 30
