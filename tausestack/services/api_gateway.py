@@ -90,7 +90,7 @@ SERVICES_CONFIG = {
         "timeout": 30
     },
     "admin_api": {
-        "url": "http://localhost:8001",  # Admin API en mismo puerto que analytics
+        "url": "http://localhost:8008",  # Admin API en puerto propio
         "health_endpoint": "/health",
         "rate_limit": 100,
         "timeout": 30

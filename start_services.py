@@ -77,6 +77,7 @@ def main():
         ("AI Services", "tausestack.services.ai_services.api.main:app", 8005),
         ("Builder API", "tausestack.services.builder_api:app", 8006),
         ("Agent Team API", "tausestack.services.agent_team_api:app", 8007),
+        ("Admin API", "tausestack.services.admin_api:app", 8008),
     ]
     
     # Mostrar servicios a iniciar
