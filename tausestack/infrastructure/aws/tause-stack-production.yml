@@ -275,6 +275,19 @@ Resources:
       ListenerArn: !Ref HTTPSListener
       Priority: 100
 
+  # Listener Rule for api.tausestack.dev subdomain
+  APISubdomainListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref APIGatewayTargetGroup
+      Conditions:
+        - Field: host-header
+          Values: [!Sub 'api.${DomainName}']
+      ListenerArn: !Ref HTTPSListener
+      Priority: 90
+
   # ECS Cluster
   ECSCluster:
     Type: AWS::ECS::Cluster
