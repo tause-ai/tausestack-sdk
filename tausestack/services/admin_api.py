@@ -14,6 +14,7 @@ import os
 from enum import Enum
 import aiofiles
 from pathlib import Path
+from fastapi import Request
 
 # Modelos de datos
 class APIType(str, Enum):
@@ -177,6 +178,40 @@ class AdminAPIService:
     
     def _setup_routes(self):
         """Configurar todas las rutas del API"""
+        
+        # Middleware de autenticación - DESHABILITADO PARA DEMOS
+        # @self.app.middleware("http")
+        # async def auth_middleware(request: Request, call_next):
+        #     # Verificar token para rutas protegidas
+        #     if request.url.path.startswith("/admin/"):
+        #         auth_header = request.headers.get("authorization")
+        #         if not auth_header or not auth_header.startswith("Bearer "):
+        #             return JSONResponse(
+        #                 status_code=401,
+        #                 content={"detail": "No se proporcionó token de autenticación."}
+        #             )
+        #         
+        #         token = auth_header.split(" ")[1]
+        #         
+        #         try:
+        #             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        #             request.state.user = payload
+        #         except jwt.PyJWTError:
+        #             return JSONResponse(
+        #                 status_code=401,
+        #                 content={"detail": "Token inválido."}
+        #             )
+        #     
+        #     return await call_next(request)
+        
+        # PARA DEMOS: Agregar automáticamente tenant_id de tause.pro
+        @self.app.middleware("http")
+        async def demo_middleware(request: Request, call_next):
+            # Agregar tenant_id automáticamente para demos
+            if hasattr(request.state, 'user') is False:
+                request.state.user = {"tenant_id": "tause.pro"}
+            
+            return await call_next(request)
         
         @self.app.get("/admin/apis", response_model=List[APIConfig])
         async def get_all_apis():

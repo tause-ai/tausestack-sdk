@@ -65,47 +65,35 @@ SERVICES_CONFIG = {
         "rate_limit": 200,
         "timeout": 30
     },
-    "mcp_server": {
-        "url": "http://localhost:8000",  # MCP Server integrado en API Gateway
-        "health_endpoint": "/health",
-        "rate_limit": 2000,
-        "timeout": 45
-    },
     "templates": {
-        "url": "http://localhost:8004",  # Templates API en puerto 8004
+        "url": "http://localhost:8004",
         "health_endpoint": "/health",
-        "rate_limit": 10000,  # Aumentar límite para health checks
+        "rate_limit": 100,
         "timeout": 30
     },
     "ai_services": {
         "url": settings.AI_SERVICES_URL,
         "health_endpoint": "/health",
-        "rate_limit": 500,  # Límite más bajo para IA por costos
-        "timeout": 60  # Timeout más alto para generación de IA
-    },
-    "admin_api": {
-        "url": "http://localhost:8001",  # Admin API usa el mismo puerto que Analytics
-        "health_endpoint": "/health",
-        "rate_limit": 1000,  # Límite alto para administración
+        "rate_limit": 100,
         "timeout": 30
     },
-    "agent_api": {
-        "url": "http://localhost:8003",  # Agent API usa el mismo puerto que Billing
+    "builder_api": {
+        "url": "http://localhost:8006",
         "health_endpoint": "/health",
-        "rate_limit": 2000,  # Límite alto para agentes
-        "timeout": 45  # Timeout más alto para ejecución de agentes
+        "rate_limit": 100,
+        "timeout": 30
     },
     "team_api": {
-        "url": "http://localhost:8007",  # Puerto del servicio de equipos
+        "url": "http://localhost:8007",
         "health_endpoint": "/health",
-        "rate_limit": 1000,  # Límite para equipos
-        "timeout": 60  # Timeout más alto para workflows de equipo
+        "rate_limit": 100,
+        "timeout": 30
     },
-    "builder_api": {
-        "url": "http://localhost:8006",  # Puerto del Builder API
+    "admin_api": {
+        "url": "http://localhost:8001",  # Admin API en mismo puerto que analytics
         "health_endpoint": "/health",
-        "rate_limit": 2000,  # Límite alto para builders externos
-        "timeout": 120  # Timeout alto para creación de apps y deployment
+        "rate_limit": 100,
+        "timeout": 30
     }
 }
 
@@ -1096,6 +1084,96 @@ async def v1_create_tenant(request: Request):
 async def v1_get_tenant(tenant_id: str, request: Request):
     """Endpoint directo para info de tenant"""
     return await builder_api_v1_proxy(f"tenants/{tenant_id}", request)
+
+# === RUTAS ADMIN API ===
+
+@app.get("/admin/dashboard/{path:path}")
+async def admin_dashboard(path: str, request: Request):
+    """Proxy para dashboard admin - SIN AUTENTICACIÓN para demos"""
+    try:
+        # Obtener headers y parámetros
+        headers = dict(request.headers)
+        params = dict(request.query_params)
+        
+        # Remover headers que pueden causar problemas
+        headers.pop('host', None)
+        headers.pop('authorization', None)  # Remover auth para demos
+        
+        # Agregar header para identificar tenant real
+        headers['X-Tenant-ID'] = 'tause.pro'
+        
+        result = await forward_request("admin_api", f"/admin/dashboard/{path}", request.method, headers, None, params)
+        
+        return Response(
+            content=result["content"],
+            status_code=result["status_code"],
+            headers={k: v for k, v in result["headers"].items() if k.lower() not in ['content-length', 'transfer-encoding']}
+        )
+        
+    except Exception as e:
+        logger.error(f"Error en admin dashboard: {str(e)}")
+        return Response(
+            content=json.dumps({"error": "Admin dashboard error", "details": str(e)}),
+            status_code=500,
+            media_type="application/json"
+        )
+
+@app.get("/admin/apis/{path:path}")
+async def admin_apis(path: str, request: Request):
+    """Proxy para APIs admin - SIN AUTENTICACIÓN para demos"""
+    try:
+        # Obtener headers y parámetros
+        headers = dict(request.headers)
+        params = dict(request.query_params)
+        
+        # Remover headers que pueden causar problemas
+        headers.pop('host', None)
+        headers.pop('authorization', None)  # Remover auth para demos
+        
+        result = await forward_request("admin_api", f"/admin/apis/{path}", request.method, headers, None, params)
+        
+        return Response(
+            content=result["content"],
+            status_code=result["status_code"],
+            headers={k: v for k, v in result["headers"].items() if k.lower() not in ['content-length', 'transfer-encoding']}
+        )
+        
+    except Exception as e:
+        logger.error(f"Error en admin APIs: {str(e)}")
+        return Response(
+            content=json.dumps({"error": "Admin APIs error", "details": str(e)}),
+            status_code=500,
+            media_type="application/json"
+        )
+
+@app.post("/admin/apis/{path:path}")
+async def admin_apis_post(path: str, request: Request):
+    """Proxy POST para APIs admin"""
+    try:
+        # Obtener headers, body y parámetros
+        headers = dict(request.headers)
+        body = await request.body()
+        params = dict(request.query_params)
+        
+        # Remover headers que pueden causar problemas
+        headers.pop('host', None)
+        headers.pop('authorization', None)  # Remover auth para demos
+        
+        result = await forward_request("admin_api", f"/admin/apis/{path}", request.method, headers, body, params)
+        
+        return Response(
+            content=result["content"],
+            status_code=result["status_code"],
+            headers={k: v for k, v in result["headers"].items() if k.lower() not in ['content-length', 'transfer-encoding']}
+        )
+        
+    except Exception as e:
+        logger.error(f"Error en admin APIs POST: {str(e)}")
+        return Response(
+            content=json.dumps({"error": "Admin APIs POST error", "details": str(e)}),
+            status_code=500,
+            media_type="application/json"
+        )
 
 if __name__ == "__main__":
     import uvicorn
