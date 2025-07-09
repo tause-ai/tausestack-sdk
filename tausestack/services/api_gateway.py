@@ -130,7 +130,7 @@ app.add_middleware(
 
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["tausestack.dev", "localhost", "127.0.0.1"]  # Hosts permitidos
+    allowed_hosts=["tausestack.dev", "api.tausestack.dev", "localhost", "127.0.0.1"]  # Hosts permitidos
 )
 
 class RateLimitExceeded(Exception):
