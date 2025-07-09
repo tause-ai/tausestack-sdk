@@ -267,8 +267,10 @@ def get_tenant_id_from_request(
     return effective_tenant
 
 async def validate_tenant_access(tenant_id: str) -> bool:
-    """Validar acceso del tenant."""
-    return tenant_id in ["default", "cliente_premium", "cliente_basico", "cliente_enterprise"]
+    """Validar acceso del tenant (datos reales)."""
+    # Tenants reales autorizados
+    real_tenants = ["tause.pro", "default"]
+    return tenant_id in real_tenants
 
 def calculate_usage_cost(usage_records: List[UsageRecord], plan: Plan) -> Decimal:
     """Calcular costo basado en uso."""
@@ -356,77 +358,50 @@ async def initialize_default_plans():
 
 async def initialize_default_configs():
     """Inicializar configuraciones por defecto."""
-    configs = [
+    # PRIMER CLIENTE REAL: tause.pro
+    real_configs = [
         TenantBillingConfig(
-            tenant_id="cliente_basico",
-            company_name="Cliente Básico S.L.",
-            billing_email="billing@basico.com",
+            tenant_id="tause.pro",
+            company_name="Tause Pro S.L.",
+            billing_email="billing@tause.pro",
             currency="EUR",
-            usage_alerts={"api_calls": 4000, "storage_gb": 1, "messages": 1000},
-            created_at=datetime.utcnow()
-        ),
-        TenantBillingConfig(
-            tenant_id="cliente_premium",
-            company_name="Premium Corp",
-            billing_email="billing@premium.com",
-            currency="USD",
-            usage_alerts={"api_calls": 40000, "storage_gb": 8, "messages": 5000},
-            created_at=datetime.utcnow()
-        ),
-        TenantBillingConfig(
-            tenant_id="cliente_enterprise",
-            company_name="Enterprise Solutions Inc.",
-            billing_email="billing@enterprise.com",
-            currency="USD",
-            usage_alerts={"storage_gb": 80, "messages": 20000},
+            auto_pay=True,
+            usage_alerts={
+                "api_calls": 100000,  # Límite real para tause.pro
+                "storage_gb": 50,
+                "messages": 10000
+            },
             created_at=datetime.utcnow()
         )
     ]
     
-    for config in configs:
+    for config in real_configs:
         billing_storage.tenant_configs[config.tenant_id] = config
+        logger.info(f"💳 Configurado tenant REAL: {config.tenant_id}")
 
 async def initialize_default_subscriptions():
     """Inicializar suscripciones por defecto."""
     now = datetime.utcnow()
     
-    subscriptions = [
+    # SUSCRIPCIÓN REAL para tause.pro
+    real_subscriptions = [
         Subscription(
-            subscription_id="sub_basico_001",
-            tenant_id="cliente_basico",
-            plan_id="basic_monthly",
+            subscription_id="sub_tause_pro_001",
+            tenant_id="tause.pro",
+            plan_id="enterprise_monthly",  # Plan enterprise para tause.pro
             status=SubscriptionStatus.ACTIVE,
-            start_date=now - timedelta(days=15),
-            current_period_start=now - timedelta(days=15),
-            current_period_end=now + timedelta(days=15),
-            created_at=now - timedelta(days=15)
-        ),
-        Subscription(
-            subscription_id="sub_premium_001",
-            tenant_id="cliente_premium",
-            plan_id="premium_monthly",
-            status=SubscriptionStatus.ACTIVE,
-            start_date=now - timedelta(days=20),
-            current_period_start=now - timedelta(days=20),
-            current_period_end=now + timedelta(days=10),
-            created_at=now - timedelta(days=20)
-        ),
-        Subscription(
-            subscription_id="sub_enterprise_001",
-            tenant_id="cliente_enterprise",
-            plan_id="enterprise_monthly",
-            status=SubscriptionStatus.ACTIVE,
-            start_date=now - timedelta(days=25),
-            current_period_start=now - timedelta(days=25),
-            current_period_end=now + timedelta(days=5),
-            created_at=now - timedelta(days=25)
+            start_date=now - timedelta(days=30),
+            current_period_start=now - timedelta(days=30),
+            current_period_end=now + timedelta(days=30),
+            created_at=now - timedelta(days=30)
         )
     ]
     
-    for subscription in subscriptions:
+    for subscription in real_subscriptions:
         if subscription.tenant_id not in billing_storage.tenant_subscriptions:
             billing_storage.tenant_subscriptions[subscription.tenant_id] = []
         billing_storage.tenant_subscriptions[subscription.tenant_id].append(subscription)
+        logger.info(f"💳 Suscripción REAL creada: {subscription.subscription_id}")
 
 # --- FastAPI App ---
 

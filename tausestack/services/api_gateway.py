@@ -256,6 +256,28 @@ async def forward_request(
         logger.error(f"Error forwarding to {service}: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal gateway error")
 
+async def log_real_event(tenant_id: str, event_type: str, event_data: Dict[str, Any]):
+    """Log eventos reales a analytics service"""
+    try:
+        if tenant_id == "tause.pro":  # Solo para datos reales
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                event_payload = {
+                    "event_type": event_type,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "properties": event_data,
+                    "user_id": "system",
+                    "session_id": "api_gateway"
+                }
+                
+                await client.post(
+                    "http://localhost:8001/events/track",
+                    json=event_payload,
+                    headers={"X-Tenant-ID": tenant_id}
+                )
+    except Exception as e:
+        # No fallar si analytics no está disponible
+        pass
+
 @app.middleware("http")
 async def gateway_middleware(request: Request, call_next):
     """Middleware principal del gateway."""
@@ -273,6 +295,33 @@ async def gateway_middleware(request: Request, call_next):
     response.headers["X-Gateway-Version"] = "1.0.0"
     response.headers["X-Tenant-ID"] = tenant_id
     response.headers["X-Response-Time"] = str(time.time() - start_time)
+    
+    return response
+
+@app.middleware("http")
+async def log_requests_middleware(request: Request, call_next):
+    """Middleware para loggear requests reales"""
+    start_time = datetime.utcnow()
+    
+    # Procesar request
+    response = await call_next(request)
+    
+    # Calcular tiempo de respuesta
+    end_time = datetime.utcnow()
+    response_time = (end_time - start_time).total_seconds() * 1000  # en ms
+    
+    # Loggear evento real para tause.pro
+    event_data = {
+        "method": request.method,
+        "path": str(request.url.path),
+        "status_code": response.status_code,
+        "response_time_ms": response_time,
+        "user_agent": request.headers.get("user-agent", ""),
+        "ip_address": request.client.host if request.client else "unknown"
+    }
+    
+    # Registrar evento en analytics (async, no bloquear respuesta)
+    asyncio.create_task(log_real_event("tause.pro", "api_call", event_data))
     
     return response
 

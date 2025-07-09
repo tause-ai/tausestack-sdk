@@ -1,0 +1,59 @@
+# .cursorrules - TauseStack Framework
+
+## CRITICAL CONSTRAINTS - NEVER VIOLATE
+- NEVER rewrite existing working code in /tausestack/services/
+- NEVER modify /examples/ without explicit instruction
+- NEVER remove tenant_id from any function signature
+- NEVER create single-tenant functionality
+- ALWAYS extend existing patterns, never create new ones
+- ALWAYS test changes against existing examples
+
+## BEFORE CODING ANYTHING
+1. Read /ARCHITECTURE.md completely
+2. Check /TODO.md for current task
+3. Verify examples work: python examples/ai_integration_demo.py
+4. Understand existing patterns in the file you'll modify
+
+## MCP IMPLEMENTATION RULES
+- All MCP tools MUST be wrappers around existing services
+- NEVER modify existing services to add MCP support
+- Create new files in /tausestack/mcp/ for all MCP functionality
+- Every MCP tool MUST validate tenant_id
+- Every MCP tool MUST use existing service patterns
+
+## FILE MODIFICATION RULES
+### SAFE TO MODIFY
+- /tausestack/mcp/ (new directory for MCP implementation)
+- /tausestack/sdk/ (extension only, not modification)
+- /docs/ (documentation)
+- /tests/ (add new tests, keep existing ones)
+
+### MODIFY WITH EXTREME CAUTION
+- /tausestack/services/ (extend only, never rewrite)
+- /admin/ (extend existing dashboard, don't rebuild)
+- /examples/ (only update if explicitly requested)
+
+### NEVER MODIFY
+- Existing working API endpoints
+- Existing database schemas without migration
+- Working example files without permission
+- Core authentication logic
+- Multi-tenant isolation logic
+
+## CODE PATTERNS TO FOLLOW
+### Service Pattern (MANDATORY)
+```python
+class NewService:
+    def __init__(self, tenant_id: str):
+        self.tenant_id = tenant_id
+        
+    async def operation(self, data: dict) -> dict:
+        # Validate tenant
+        # Execute operation  
+        # Log analytics
+        # Return result---
+description:
+globs:
+alwaysApply: true
+
+---
