@@ -985,7 +985,15 @@ async def builder_api_v1_proxy(path: str, request: Request):
     headers["X-Tenant-ID"] = tenant_id
     
     try:
-        result = await forward_request("builder_api", f"/v1/{path}", request.method, headers, body, params)
+        # Builder API tiene rutas /v1/* y /health
+        # /v1/templates/list -> /v1/templates/list
+        # /v1/health -> /health (especial case)
+        if path == "health":
+            builder_path = "/health"
+        else:
+            builder_path = f"/v1/{path}"
+        
+        result = await forward_request("builder_api", builder_path, request.method, headers, body, params)
         
         return Response(
             content=result["content"],
