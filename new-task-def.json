@@ -1,0 +1,106 @@
+{
+  "family": "tausestack-final-fixed-task",
+  "taskRoleArn": "arn:aws:iam::349622182214:role/tausestack-final-fixed-ECSTaskRole-SRkpjerDcREB",
+  "executionRoleArn": "arn:aws:iam::349622182214:role/tausestack-final-fixed-ECSExecutionRole-9hU45Pqfkrbj",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "512",
+  "memory": "1024",
+  "containerDefinitions": [
+    {
+      "name": "tausestack",
+      "image": "349622182214.dkr.ecr.us-east-1.amazonaws.com/tausestack-production:latest",
+      "cpu": 0,
+      "links": [],
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "entryPoint": [],
+      "command": [],
+      "environment": [
+        {
+          "name": "PYTHONPATH",
+          "value": "/app"
+        },
+        {
+          "name": "SUPABASE_ANON_KEY",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqb3htcHJtY2JrbWh3bWJuaWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1NzM4NzQsImV4cCI6MjA2NzE0OTg3NH0.bY4FrlKtDK2TnMt7hOC5_KpIuoHwqJLOYkB-bWs_Wd8"
+        },
+        {
+          "name": "PYTHONUNBUFFERED",
+          "value": "1"
+        },
+        {
+          "name": "PORT",
+          "value": "8000"
+        },
+        {
+          "name": "WORKERS",
+          "value": "2"
+        },
+        {
+          "name": "ENVIRONMENT",
+          "value": "production"
+        },
+        {
+          "name": "SUPABASE_URL",
+          "value": "https://vjoxmprmcbkmhwmbniaz.supabase.co"
+        },
+        {
+          "name": "API_GATEWAY_URL",
+          "value": "https://api.tausestack.dev"
+        },
+        {
+          "name": "FRONTEND_URL",
+          "value": "https://tausestack.dev"
+        },
+        {
+          "name": "SUPABASE_JWT_SECRET",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqb3htcHJtY2JrbWh3bWJuaWF6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTU3Mzg3NCwiZXhwIjoyMDY3MTQ5ODc0fQ.PfU_xe38vl3wW1DQZaOp10p1HaM89Og-O0hYfJcgFBk"
+        },
+        {
+          "name": "TAUSESTACK_AUTH_BACKEND",
+          "value": "supabase"
+        }
+      ],
+      "environmentFiles": [],
+      "mountPoints": [],
+      "volumesFrom": [],
+      "secrets": [],
+      "dnsServers": [],
+      "dnsSearchDomains": [],
+      "extraHosts": [],
+      "dockerSecurityOptions": [],
+      "dockerLabels": {},
+      "ulimits": [],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/tausestack-final-fixed",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        },
+        "secretOptions": []
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:8000/health || exit 1"
+        ],
+        "interval": 60,
+        "timeout": 10,
+        "retries": 5,
+        "startPeriod": 120
+      },
+      "systemControls": [],
+      "credentialSpecs": []
+    }
+  ]
+}

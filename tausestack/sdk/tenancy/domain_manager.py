@@ -62,6 +62,11 @@ class DomainManager:
         }
         
         logger.info(f"DomainManager initialized for base domain: {self.base_domain}")
+        
+        # Auto-register api.tausestack.dev as custom domain for api_service
+        if self.base_domain == "tausestack.dev":
+            self.register_custom_domain("api_service", "api.tausestack.dev")
+            logger.info("Auto-registered api.tausestack.dev for api_service")
     
     def resolve_tenant_from_host(self, host: str) -> Optional[str]:
         """
