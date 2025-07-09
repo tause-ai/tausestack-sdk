@@ -40,6 +40,9 @@ COPY --from=builder /app /app
 # Copy frontend build
 COPY frontend/out/ /app/frontend/
 
+# Copy templates directory for Builder API
+COPY templates/ /app/templates/
+
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash tausestack
 
