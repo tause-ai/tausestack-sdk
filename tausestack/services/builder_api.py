@@ -342,9 +342,11 @@ class BuilderAPIService:
         async def create_app(request: AppCreateRequest, background_tasks: BackgroundTasks):
             """Crear nueva app desde template"""
             
-            # Validar que el template existe
-            template_file = self.templates_dir / "registry" / f"{request.template_id}.json"
-            if not template_file.exists():
+            # Validar que el template existe (JSON registry o código real)
+            template_json = self.templates_dir / "registry" / f"{request.template_id}.json"
+            template_dir = self.templates_dir / request.template_id
+            
+            if not template_json.exists() and not template_dir.exists():
                 raise HTTPException(status_code=404, detail="Template not found")
             
             # Validar que el tenant existe
@@ -504,51 +506,150 @@ class BuilderAPIService:
             await self._save_tenants()
             
             return {"message": "Tenant configured successfully", "settings": tenant.settings}
+
+        @self.app.get("/v1/stats")
+        async def get_builder_stats():
+            """Estadísticas del Builder API - para dashboard"""
+            return {
+                "total_apps": len(self.apps),
+                "total_deployments": len(self.deployments),
+                "total_tenants": len(self.tenants),
+                "apps_by_status": {
+                    "ready": len([app for app in self.apps.values() if app.status == "ready"]),
+                    "creating": len([app for app in self.apps.values() if app.status == "creating"]),
+                    "failed": len([app for app in self.apps.values() if app.status == "failed"])
+                },
+                "deployments_by_status": {
+                    "deployed": len([d for d in self.deployments.values() if d.status == "deployed"]),
+                    "deploying": len([d for d in self.deployments.values() if d.status == "deploying"]),
+                    "failed": len([d for d in self.deployments.values() if d.status == "failed"])
+                },
+                "recent_activity": {
+                    "last_app_created": max([app.created_at for app in self.apps.values()], default=None),
+                    "last_deployment": max([d.started_at for d in self.deployments.values()], default=None)
+                }
+            }
+        
+        @self.app.post("/v1/apps/{app_id}/run")
+        async def run_app(app_id: str):
+            """Ejecutar aplicación generada"""
+            if app_id not in self.apps:
+                raise HTTPException(status_code=404, detail="App not found")
+            
+            app = self.apps[app_id]
+            if app.status != "ready":
+                raise HTTPException(status_code=400, detail="App is not ready to run")
+            
+            app_dir = self.apps_dir / app_id
+            if not app_dir.exists():
+                raise HTTPException(status_code=404, detail="App directory not found")
+            
+            # Obtener puertos configurados
+            frontend_port = int(app.endpoints["frontend"].split(":")[-1])
+            backend_port = int(app.endpoints["api"].split(":")[-1])
+            
+            # Comandos para ejecutar
+            commands = []
+            
+            # Comando para backend
+            backend_dir = app_dir / "backend"
+            if backend_dir.exists():
+                commands.append({
+                    "name": "backend",
+                    "command": f"cd {backend_dir} && uvicorn app.main:app --host 0.0.0.0 --port {backend_port} --reload",
+                    "directory": str(backend_dir),
+                    "port": backend_port
+                })
+            
+            # Comando para frontend
+            frontend_dir = app_dir / "frontend"
+            if frontend_dir.exists():
+                commands.append({
+                    "name": "frontend",
+                    "command": f"cd {frontend_dir} && npm run dev -- --port {frontend_port}",
+                    "directory": str(frontend_dir),
+                    "port": frontend_port
+                })
+            
+            return {
+                "app_id": app_id,
+                "app_name": app.app_name,
+                "status": "ready_to_run",
+                "endpoints": app.endpoints,
+                "commands": commands,
+                "instructions": f"Para ejecutar '{app.app_name}', ejecuta estos comandos en terminales separadas",
+                "notes": [
+                    "Asegúrate de tener Node.js y Python instalados",
+                    "Las dependencias ya están instaladas durante la creación",
+                    "Accede a los endpoints mostrados una vez que ejecutes los comandos"
+                ]
+            }
+        
+        @self.app.get("/v1/apps/{app_id}/files")
+        async def list_app_files(app_id: str):
+            """Listar archivos de la aplicación generada"""
+            if app_id not in self.apps:
+                raise HTTPException(status_code=404, detail="App not found")
+            
+            app_dir = self.apps_dir / app_id
+            if not app_dir.exists():
+                raise HTTPException(status_code=404, detail="App directory not found")
+            
+            files = []
+            for root, dirs, filenames in os.walk(app_dir):
+                for filename in filenames:
+                    file_path = Path(root) / filename
+                    relative_path = file_path.relative_to(app_dir)
+                    files.append({
+                        "path": str(relative_path),
+                        "size": file_path.stat().st_size,
+                        "modified": datetime.fromtimestamp(file_path.stat().st_mtime).isoformat()
+                    })
+            
+            return {
+                "app_id": app_id,
+                "total_files": len(files),
+                "files": files
+            }
     
     async def _create_app_background(self, app_id: str, request: AppCreateRequest):
-        """Crear app en background"""
+        """Crear app en background con código REAL"""
         try:
             app = self.apps[app_id]
-            app.build_logs.append(f"Starting app creation for {request.app_name}")
-            
-            # Leer template
-            template_file = self.templates_dir / "registry" / f"{request.template_id}.json"
-            async with aiofiles.open(template_file, 'r') as f:
-                content = await f.read()
-                template_data = json.loads(content)
-            
-            app.build_logs.append(f"Template {request.template_id} loaded successfully")
+            app.build_logs.append(f"Starting REAL app creation for {request.app_name}")
             
             # Crear directorio de la app
             app_dir = self.apps_dir / app_id
             app_dir.mkdir(exist_ok=True)
             
-            # Aplicar configuración personalizada
-            if request.configuration:
-                template_data.update(request.configuration)
+            # Detectar tipo de template y copiar código real
+            if request.template_id in ["advanced-dashboard", "ecommerce-complete"]:
+                # Estos templates usan el código base de website
+                await self._copy_website_template(app_id, request, app_dir)
+            else:
+                # Templates con código real propio
+                await self._copy_template_code(app_id, request, app_dir)
             
-            # Guardar app data
-            app_data_file = app_dir / "app_data.json"
-            async with aiofiles.open(app_data_file, 'w') as f:
-                await f.write(json.dumps({
-                    "app_id": app_id,
-                    "template_data": template_data,
-                    "custom_data": request.custom_data,
-                    "environment_variables": request.environment_variables
-                }, indent=2))
+            # Personalizar el código con datos del usuario
+            await self._customize_template(app_id, request, app_dir)
             
-            app.build_logs.append("App data saved successfully")
+            # Instalar dependencias
+            await self._install_dependencies(app_id, app_dir)
             
-            # Simular endpoints generados
+            # Configurar endpoints reales
+            frontend_port = 3000 + int(app_id.split('_')[1][:4], 16) % 1000
+            backend_port = 8000 + int(app_id.split('_')[1][:4], 16) % 1000
+            
             app.endpoints = {
-                "frontend": f"http://{app_id}.localhost:3000",
-                "api": f"http://{app_id}.localhost:8000", 
-                "admin": f"http://{app_id}.localhost:3000/admin"
+                "frontend": f"http://localhost:{frontend_port}",
+                "api": f"http://localhost:{backend_port}", 
+                "admin": f"http://localhost:{frontend_port}/admin",
+                "local_path": str(app_dir)
             }
             
             # Marcar como listo
             app.status = "ready"
-            app.build_logs.append("App created successfully and ready for deployment")
+            app.build_logs.append("App created successfully with REAL code and ready for execution")
             
             # Actualizar usage del tenant
             tenant = self.tenants[request.tenant_id]
@@ -562,6 +663,140 @@ class BuilderAPIService:
             app.status = "failed"
             app.build_logs.append(f"Error creating app: {str(e)}")
             await self._save_apps()
+    
+    async def _copy_website_template(self, app_id: str, request: AppCreateRequest, app_dir: Path):
+        """Copiar template website como base"""
+        app = self.apps[app_id]
+        
+        # Copiar backend
+        website_backend = self.templates_dir / "website" / "backend"
+        if website_backend.exists():
+            backend_dir = app_dir / "backend"
+            shutil.copytree(website_backend, backend_dir)
+            app.build_logs.append("Backend code copied from website template")
+        
+        # Copiar frontend
+        website_frontend = self.templates_dir / "website" / "frontend"
+        if website_frontend.exists():
+            frontend_dir = app_dir / "frontend"
+            shutil.copytree(website_frontend, frontend_dir)
+            app.build_logs.append("Frontend code copied from website template")
+        
+        # Copiar README
+        readme_file = self.templates_dir / "website" / "README.md"
+        if readme_file.exists():
+            shutil.copy2(readme_file, app_dir / "README.md")
+            app.build_logs.append("README copied")
+    
+    async def _copy_template_code(self, app_id: str, request: AppCreateRequest, app_dir: Path):
+        """Copiar código de template específico"""
+        app = self.apps[app_id]
+        
+        template_dir = self.templates_dir / request.template_id
+        if template_dir.exists():
+            # Copiar todo el contenido del template
+            for item in template_dir.iterdir():
+                if item.is_dir():
+                    shutil.copytree(item, app_dir / item.name)
+                else:
+                    shutil.copy2(item, app_dir / item.name)
+            app.build_logs.append(f"Template {request.template_id} code copied")
+        else:
+            # Fallback al template website
+            await self._copy_website_template(app_id, request, app_dir)
+            app.build_logs.append(f"Template {request.template_id} not found, using website template")
+    
+    async def _customize_template(self, app_id: str, request: AppCreateRequest, app_dir: Path):
+        """Personalizar template con datos del usuario"""
+        app = self.apps[app_id]
+        
+        # Personalizar package.json del frontend
+        frontend_package = app_dir / "frontend" / "package.json"
+        if frontend_package.exists():
+            async with aiofiles.open(frontend_package, 'r') as f:
+                package_data = json.loads(await f.read())
+            
+            # Actualizar nombre del proyecto
+            package_data["name"] = request.app_name.lower().replace(" ", "-")
+            
+            async with aiofiles.open(frontend_package, 'w') as f:
+                await f.write(json.dumps(package_data, indent=2))
+            
+            app.build_logs.append("Frontend package.json customized")
+        
+        # Personalizar main.py del backend
+        backend_main = app_dir / "backend" / "app" / "main.py"
+        if backend_main.exists():
+            async with aiofiles.open(backend_main, 'r') as f:
+                main_content = await f.read()
+            
+            # Personalizar mensaje de bienvenida
+            customized_content = main_content.replace(
+                "¡Bienvenido a tu API FastAPI con TauseStack!",
+                f"¡Bienvenido a {request.app_name} - API generada con TauseStack!"
+            )
+            
+            async with aiofiles.open(backend_main, 'w') as f:
+                await f.write(customized_content)
+            
+            app.build_logs.append("Backend main.py customized")
+        
+        # Guardar metadata de configuración
+        config_file = app_dir / "tausestack.json"
+        async with aiofiles.open(config_file, 'w') as f:
+            await f.write(json.dumps({
+                "app_id": app_id,
+                "app_name": request.app_name,
+                "template_id": request.template_id,
+                "tenant_id": request.tenant_id,
+                "created_at": datetime.now().isoformat(),
+                "configuration": request.configuration,
+                "environment_variables": request.environment_variables
+            }, indent=2))
+        
+        app.build_logs.append("TauseStack configuration saved")
+    
+    async def _install_dependencies(self, app_id: str, app_dir: Path):
+        """Instalar dependencias del proyecto"""
+        app = self.apps[app_id]
+        
+        # Instalar dependencias del frontend
+        frontend_dir = app_dir / "frontend"
+        if (frontend_dir / "package.json").exists():
+            try:
+                process = await asyncio.create_subprocess_shell(
+                    "npm install",
+                    cwd=frontend_dir,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                stdout, stderr = await process.communicate()
+                
+                if process.returncode == 0:
+                    app.build_logs.append("Frontend dependencies installed successfully")
+                else:
+                    app.build_logs.append(f"Frontend dependencies warning: {stderr.decode()}")
+            except Exception as e:
+                app.build_logs.append(f"Frontend dependencies installation failed: {str(e)}")
+        
+        # Instalar dependencias del backend
+        backend_dir = app_dir / "backend"
+        if (backend_dir / "requirements.txt").exists():
+            try:
+                process = await asyncio.create_subprocess_shell(
+                    "pip install -r requirements.txt",
+                    cwd=backend_dir,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                stdout, stderr = await process.communicate()
+                
+                if process.returncode == 0:
+                    app.build_logs.append("Backend dependencies installed successfully")
+                else:
+                    app.build_logs.append(f"Backend dependencies warning: {stderr.decode()}")
+            except Exception as e:
+                app.build_logs.append(f"Backend dependencies installation failed: {str(e)}")
     
     async def _deploy_app_background(self, deployment_id: str, request: DeployRequest):
         """Hacer deployment en background"""

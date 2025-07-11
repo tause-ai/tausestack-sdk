@@ -999,6 +999,64 @@ async def reset_tenant_limits(tenant_id: str, current_user: User = Depends(requi
         "reset_by": current_user.id
     }
 
+# === BUILDER API ROUTES ===
+
+@app.api_route("/api/builder/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def builder_api_proxy(path: str, request: Request):
+    """Proxy para Builder API - Frontend routes /api/builder/* -> /v1/*"""
+    tenant_id = get_tenant_id(request)
+    
+    # Rate limiting para Builder API
+    if not check_rate_limit(tenant_id, "builder_api"):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded for Builder API")
+    
+    # Actualizar métricas
+    gateway_metrics["tenant_usage"][tenant_id] += 1
+    
+    # Preparar request
+    headers = dict(request.headers)
+    body = await request.body() if request.method in ["POST", "PUT", "PATCH"] else None
+    params = dict(request.query_params)
+    
+    # Agregar tenant_id a headers para context
+    headers["X-Tenant-ID"] = tenant_id
+    
+    try:
+        # Mapear rutas del frontend a rutas del Builder API
+        # GET /api/builder/projects -> GET /v1/apps (listar)
+        # POST /api/builder/projects -> POST /v1/apps/create (crear)
+        # GET /api/builder/stats -> GET /v1/stats
+        # GET /api/builder/templates -> GET /v1/templates
+        
+        if path == "projects":
+            if request.method == "GET":
+                builder_path = "/v1/apps"
+            elif request.method == "POST":
+                builder_path = "/v1/apps/create"
+            else:
+                builder_path = "/v1/apps"
+        elif path == "stats":
+            builder_path = "/v1/stats"
+        elif path.startswith("projects/"):
+            # /api/builder/projects/123 -> /v1/apps/123
+            app_id = path.split("/", 1)[1]
+            builder_path = f"/v1/apps/{app_id}"
+        else:
+            builder_path = f"/v1/{path}"
+        
+        result = await forward_request("builder_api", builder_path, request.method, headers, body, params)
+        
+        return Response(
+            content=result["content"],
+            status_code=result["status_code"],
+            headers={k: v for k, v in result["headers"].items() if k.lower() not in ['content-length', 'transfer-encoding']}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Builder API proxy error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Builder API service error")
+
 # === BUILDER API v1 ENDPOINTS ===
 
 @app.api_route("/v1/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
