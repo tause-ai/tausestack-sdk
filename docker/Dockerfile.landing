@@ -1,0 +1,78 @@
+# Dockerfile para TausePro Landing Page (tause.pro)
+FROM node:18-alpine AS builder
+
+# Instalar dependencias del sistema
+RUN apk add --no-cache libc6-compat
+
+# Establecer directorio de trabajo
+WORKDIR /app
+
+# Copiar archivos de configuración
+COPY package*.json yarn.lock ./
+
+# Instalar dependencias
+RUN yarn install --frozen-lockfile
+
+# Copiar código fuente
+COPY . .
+
+# Args para configuración
+ARG NEXT_PUBLIC_DOMAIN=tause.pro
+ARG NEXT_PUBLIC_TAUSESTACK_API=https://api.tausestack.dev
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+# Variables de entorno
+ENV NEXT_PUBLIC_DOMAIN=$NEXT_PUBLIC_DOMAIN
+ENV NEXT_PUBLIC_TAUSESTACK_API=$NEXT_PUBLIC_TAUSESTACK_API
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+# Configurar para landing page
+ENV NEXT_PUBLIC_APP_MODE=landing
+ENV NEXT_PUBLIC_BASE_URL=https://$NEXT_PUBLIC_DOMAIN
+
+# Construir aplicación
+RUN yarn build:landing
+
+# Etapa de producción
+FROM node:18-alpine AS runner
+
+# Instalar dependencias del sistema
+RUN apk add --no-cache \
+    dumb-init \
+    && addgroup -g 1001 -S nodejs \
+    && adduser -S nextjs -u 1001
+
+WORKDIR /app
+
+# Copiar archivos necesarios desde builder
+COPY --from=builder /app/next.config.js ./
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+# Crear directorio de archivos estáticos
+RUN mkdir -p .next/static
+
+# Configurar permisos
+RUN chown -R nextjs:nodejs /app
+
+# Cambiar a usuario no root
+USER nextjs
+
+# Exponer puerto
+EXPOSE 3000
+
+# Variables de entorno de producción
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Comando de inicio
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "server.js"] 

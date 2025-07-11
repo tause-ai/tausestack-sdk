@@ -1,0 +1,52 @@
+{
+  "Changes": [
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "tause.pro",
+        "Type": "A",
+        "AliasTarget": {
+          "DNSName": "tausestack-final-fixed-alb-334527200.us-east-1.elb.amazonaws.com",
+          "EvaluateTargetHealth": false,
+          "HostedZoneId": "Z35SXDOTRQ7X7K"
+        }
+      }
+    },
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "app.tause.pro",
+        "Type": "A",
+        "AliasTarget": {
+          "DNSName": "tausestack-final-fixed-alb-334527200.us-east-1.elb.amazonaws.com",
+          "EvaluateTargetHealth": false,
+          "HostedZoneId": "Z35SXDOTRQ7X7K"
+        }
+      }
+    },
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "api.tause.pro",
+        "Type": "A",
+        "AliasTarget": {
+          "DNSName": "tausestack-final-fixed-alb-334527200.us-east-1.elb.amazonaws.com",
+          "EvaluateTargetHealth": false,
+          "HostedZoneId": "Z35SXDOTRQ7X7K"
+        }
+      }
+    },
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "www.tause.pro",
+        "Type": "A",
+        "AliasTarget": {
+          "DNSName": "tausestack-final-fixed-alb-334527200.us-east-1.elb.amazonaws.com",
+          "EvaluateTargetHealth": false,
+          "HostedZoneId": "Z35SXDOTRQ7X7K"
+        }
+      }
+    }
+  ]
+} 

@@ -32,8 +32,19 @@ class DomainManager:
         self.base_domain = os.getenv("TAUSESTACK_BASE_DOMAIN", "tause.pro")
         self.default_tenant = os.getenv("TAUSESTACK_DEFAULT_TENANT_ID", "default")
         
-        # Domain patterns
-        self.subdomain_pattern = rf"^([a-z0-9-]+)\.{re.escape(self.base_domain)}$"
+        # Soporte para múltiples dominios base
+        self.supported_domains = [
+            "tause.pro",        # TausePro marketing platform
+            "tausestack.dev",   # TauseStack development platform
+            "app.tause.pro",    # TausePro application
+            "api.tausestack.dev"  # TauseStack API
+        ]
+        
+        # Domain patterns para múltiples dominios
+        self.domain_patterns = {}
+        for domain in self.supported_domains:
+            if not domain.startswith("api.") and not domain.startswith("app."):
+                self.domain_patterns[domain] = rf"^([a-z0-9-]+)\.{re.escape(domain)}$"
         
         # Custom domain mappings (tenant_id -> custom_domain)
         self._custom_domains: Dict[str, str] = {}
@@ -48,32 +59,53 @@ class DomainManager:
             "help", "console", "manage"
         }
         
-        # System subdomains and their service mappings
+        # System subdomains and their service mappings per domain
         self._system_subdomains = {
-            "api": "api_service",      # API REST endpoints
-            "admin": "admin_panel",    # Panel de administración
-            "docs": "documentation",   # Documentación
-            "app": "default",          # Aplicación principal (tenant por defecto)
-            "www": "landing",          # Landing page redirect
-            "cdn": "static_assets",    # CDN para assets estáticos
-            "status": "status_page",   # Página de estado del sistema
-            "blog": "blog_content",    # Blog/contenido
-            "help": "help_center"      # Centro de ayuda
+            "tause.pro": {
+                "www": "landing",           # Landing page redirect
+                "app": "tausepro_app",      # TausePro marketing app
+                "api": "tausepro_api",      # TausePro API (proxy to TauseStack)
+                "docs": "documentation",    # Documentación
+                "blog": "blog_content",     # Blog/contenido
+                "help": "help_center"       # Centro de ayuda
+            },
+            "tausestack.dev": {
+                "api": "api_service",       # API REST endpoints
+                "admin": "admin_panel",     # Panel de administración
+                "docs": "documentation",    # Documentación
+                "app": "default",           # Aplicación principal (tenant por defecto)
+                "www": "landing",           # Landing page redirect
+                "cdn": "static_assets",     # CDN para assets estáticos
+                "status": "status_page",    # Página de estado del sistema
+                "blog": "blog_content",     # Blog/contenido
+                "help": "help_center"       # Centro de ayuda
+            }
         }
         
-        logger.info(f"DomainManager initialized for base domain: {self.base_domain}")
+        # Registro automático de dominios específicos
+        self._auto_register_domains()
         
-        # Auto-register api.tausestack.dev as custom domain for api_service
-        if self.base_domain == "tausestack.dev":
+        logger.info(f"DomainManager initialized for base domain: {self.base_domain}")
+        logger.info(f"Supported domains: {', '.join(self.supported_domains)}")
+    
+    def _auto_register_domains(self):
+        """Auto-registra dominios específicos según configuración"""
+        # Auto-register api.tausestack.dev como custom domain para api_service
+        if "tausestack.dev" in self.supported_domains:
             self.register_custom_domain("api_service", "api.tausestack.dev")
             logger.info("Auto-registered api.tausestack.dev for api_service")
+        
+        # Auto-register app.tause.pro como custom domain para tausepro_app
+        if "tause.pro" in self.supported_domains:
+            self.register_custom_domain("tausepro_app", "app.tause.pro")
+            logger.info("Auto-registered app.tause.pro for tausepro_app")
     
     def resolve_tenant_from_host(self, host: str) -> Optional[str]:
         """
-        Resolve tenant ID from HTTP Host header.
+        Resolve tenant ID from HTTP Host header with multi-domain support.
         
         Args:
-            host: HTTP Host header value (e.g., "client1.tause.pro", "app.client.com")
+            host: HTTP Host header value (e.g., "client1.tause.pro", "app.tause.pro", "api.tausestack.dev")
             
         Returns:
             Tenant ID or None if cannot resolve
@@ -90,33 +122,45 @@ class DomainManager:
             logger.debug(f"Resolved custom domain {host} to tenant: {tenant_id}")
             return tenant_id
         
-        # Check subdomain pattern
-        match = re.match(self.subdomain_pattern, host)
-        if match:
-            subdomain = match.group(1)
-            
-            # Check if it's a system subdomain first
-            if subdomain in self._system_subdomains:
-                service_tenant = self._system_subdomains[subdomain]
-                logger.debug(f"System subdomain {subdomain} resolved to service: {service_tenant}")
-                return service_tenant
-            
-            # Check if subdomain is reserved (but not system)
-            if subdomain in self._reserved_subdomains:
-                logger.warning(f"Reserved subdomain {subdomain} cannot be used as tenant")
-                return self.default_tenant
-            
-            # This is a custom tenant subdomain
-            logger.debug(f"Resolved subdomain {subdomain} to tenant: {subdomain}")
-            return subdomain
+        # Check if it's a direct supported domain (like app.tause.pro, api.tausestack.dev)
+        if host in self.supported_domains:
+            if host == "app.tause.pro":
+                logger.debug(f"Direct domain {host} resolved to: tausepro_app")
+                return "tausepro_app"
+            elif host == "api.tausestack.dev":
+                logger.debug(f"Direct domain {host} resolved to: api_service")
+                return "api_service"
         
-        # Check if it's the base domain
-        if host == self.base_domain:
-            logger.debug(f"Base domain {host} resolved to landing page")
-            return "landing"
-        elif host == f"www.{self.base_domain}":
-            logger.debug(f"WWW domain {host} resolved to landing page")
-            return "landing"
+        # Check subdomain patterns for each supported domain
+        for domain, pattern in self.domain_patterns.items():
+            match = re.match(pattern, host)
+            if match:
+                subdomain = match.group(1)
+                
+                # Check if it's a system subdomain for this domain
+                if domain in self._system_subdomains and subdomain in self._system_subdomains[domain]:
+                    service_tenant = self._system_subdomains[domain][subdomain]
+                    logger.debug(f"System subdomain {subdomain}.{domain} resolved to service: {service_tenant}")
+                    return service_tenant
+                
+                # Check if subdomain is reserved (but not system)
+                if subdomain in self._reserved_subdomains:
+                    logger.warning(f"Reserved subdomain {subdomain}.{domain} cannot be used as tenant")
+                    return self.default_tenant
+                
+                # This is a custom tenant subdomain for this domain
+                tenant_id = f"{subdomain}_{domain.replace('.', '_')}"  # e.g., client1_tause_pro
+                logger.debug(f"Resolved subdomain {subdomain}.{domain} to tenant: {tenant_id}")
+                return tenant_id
+        
+        # Check if it's one of the base domains
+        for domain in self.supported_domains:
+            if host == domain:
+                logger.debug(f"Base domain {host} resolved to landing page")
+                return "landing"
+            elif host == f"www.{domain}":
+                logger.debug(f"WWW domain {host} resolved to landing page")
+                return "landing"
         
         # Fallback to default tenant for unrecognized domains
         logger.warning(f"Unrecognized host {host}, falling back to default tenant")
@@ -196,14 +240,15 @@ class DomainManager:
             logger.error(f"Error unregistering custom domain for tenant {tenant_id}: {e}")
             return False
     
-    def get_tenant_url(self, tenant_id: str, path: str = "", https: bool = True) -> str:
+    def get_tenant_url(self, tenant_id: str, path: str = "", https: bool = True, domain_type: str = "auto") -> str:
         """
-        Generate URL for a specific tenant.
+        Generate URL for a specific tenant with multi-domain support.
         
         Args:
             tenant_id: Tenant identifier
             path: URL path (optional)
             https: Use HTTPS protocol
+            domain_type: Domain type preference ("auto", "tause.pro", "tausestack.dev")
             
         Returns:
             Full URL for the tenant
@@ -213,10 +258,42 @@ class DomainManager:
         # Use custom domain if available
         if tenant_id in self._custom_domains:
             domain = self._custom_domains[tenant_id]
+        elif tenant_id == "api_service":
+            domain = "api.tausestack.dev"
+        elif tenant_id == "tausepro_app":
+            domain = "app.tause.pro"
+        elif tenant_id == "landing":
+            # Determine which landing page based on domain_type
+            if domain_type == "tause.pro":
+                domain = "tause.pro"
+            elif domain_type == "tausestack.dev":
+                domain = "tausestack.dev"
+            else:
+                domain = self.base_domain
         elif tenant_id == self.default_tenant:
-            domain = f"app.{self.base_domain}"
+            # Use appropriate base domain
+            if domain_type == "tause.pro":
+                domain = f"app.tause.pro"
+            elif domain_type == "tausestack.dev":
+                domain = f"app.tausestack.dev"
+            else:
+                domain = f"app.{self.base_domain}"
         else:
-            domain = f"{tenant_id}.{self.base_domain}"
+            # Determine base domain for subdomain
+            if domain_type == "tause.pro":
+                base_domain = "tause.pro"
+            elif domain_type == "tausestack.dev":
+                base_domain = "tausestack.dev"
+            else:
+                base_domain = self.base_domain
+            
+            # Extract tenant name from tenant_id if it contains domain info
+            if "_" in tenant_id:
+                tenant_name = tenant_id.split("_")[0]
+            else:
+                tenant_name = tenant_id
+            
+            domain = f"{tenant_name}.{base_domain}"
         
         path = path.lstrip('/')
         if path:

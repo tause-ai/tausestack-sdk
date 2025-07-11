@@ -611,6 +611,188 @@ class BuilderAPIService:
                 "total_files": len(files),
                 "files": files
             }
+
+        # === LIVE CODING ENDPOINTS (EXTENSIÓN SIGUIENDO MEJORES PRÁCTICAS) ===
+        
+        @self.app.get("/v1/apps/{app_id}/file/{file_path:path}")
+        async def get_file_content(app_id: str, file_path: str):
+            """Obtener contenido de un archivo para edición en live coding"""
+            if app_id not in self.apps:
+                raise HTTPException(status_code=404, detail="App not found")
+            
+            app_dir = self.apps_dir / app_id
+            target_file = app_dir / file_path
+            
+            # Validación de seguridad - el archivo debe estar dentro del directorio de la app
+            try:
+                target_file.resolve().relative_to(app_dir.resolve())
+            except ValueError:
+                raise HTTPException(status_code=403, detail="Access denied")
+            
+            if not target_file.exists():
+                raise HTTPException(status_code=404, detail="File not found")
+            
+            try:
+                async with aiofiles.open(target_file, 'r', encoding='utf-8') as f:
+                    content = await f.read()
+                
+                return {
+                    "app_id": app_id,
+                    "file_path": file_path,
+                    "content": content,
+                    "size": target_file.stat().st_size,
+                    "modified": datetime.fromtimestamp(target_file.stat().st_mtime).isoformat()
+                }
+            except UnicodeDecodeError:
+                raise HTTPException(status_code=400, detail="File is not text readable")
+        
+        @self.app.put("/v1/apps/{app_id}/file/{file_path:path}")
+        async def update_file_content(app_id: str, file_path: str, content_data: Dict[str, str]):
+            """Actualizar contenido de un archivo para live coding"""
+            if app_id not in self.apps:
+                raise HTTPException(status_code=404, detail="App not found")
+            
+            content = content_data.get("content", "")
+            app_dir = self.apps_dir / app_id
+            target_file = app_dir / file_path
+            
+            # Validación de seguridad
+            try:
+                target_file.resolve().relative_to(app_dir.resolve())
+            except ValueError:
+                raise HTTPException(status_code=403, detail="Access denied")
+            
+            # Crear directorios padre si no existen
+            target_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            try:
+                async with aiofiles.open(target_file, 'w', encoding='utf-8') as f:
+                    await f.write(content)
+                
+                return {
+                    "app_id": app_id,
+                    "file_path": file_path,
+                    "status": "updated",
+                    "size": len(content.encode('utf-8')),
+                    "modified": datetime.now().isoformat()
+                }
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to update file: {str(e)}")
+        
+        @self.app.post("/v1/apps/{app_id}/ai/generate")
+        async def generate_code_with_ai(app_id: str, request_data: Dict[str, Any]):
+            """Generar código usando IA para una aplicación específica - INTEGRACIÓN CON AI SERVICES EXISTENTE"""
+            if app_id not in self.apps:
+                raise HTTPException(status_code=404, detail="App not found")
+            
+            app = self.apps[app_id]
+            tenant_id = app.tenant_id
+            
+            # Preparar request para AI Services siguiendo el patrón establecido
+            ai_request = {
+                "description": request_data.get("description", ""),
+                "component_type": request_data.get("component_type", "component"),
+                "required_props": request_data.get("required_props", []),
+                "features": request_data.get("features", []),
+                "styling_preferences": request_data.get("styling_preferences", "modern"),
+                "strategy": request_data.get("strategy", "balanced"),
+                "session_id": f"{tenant_id}_{app_id}",
+                "stream": False
+            }
+            
+            try:
+                # Llamar al AI Services existente (mantener aislamiento entre servicios)
+                import httpx
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        "http://localhost:8005/generate/component",
+                        json=ai_request,
+                        timeout=30.0
+                    )
+                    
+                    if response.status_code == 200:
+                        ai_response = response.json()
+                        return {
+                            "app_id": app_id,
+                            "generated_code": ai_response.get("code", ""),
+                            "explanation": ai_response.get("explanation", ""),
+                            "provider": ai_response.get("provider", ""),
+                            "cost_estimate": ai_response.get("cost_estimate", 0),
+                            "suggestions": ai_response.get("suggestions", [])
+                        }
+                    else:
+                        raise HTTPException(status_code=500, detail="AI service unavailable")
+            
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
+        
+        @self.app.post("/v1/apps/{app_id}/ai/chat")
+        async def chat_with_ai_about_app(app_id: str, message_data: Dict[str, str]):
+            """Chat con IA sobre una aplicación específica - INTEGRACIÓN CON AI SERVICES EXISTENTE"""
+            if app_id not in self.apps:
+                raise HTTPException(status_code=404, detail="App not found")
+            
+            app = self.apps[app_id]
+            tenant_id = app.tenant_id
+            message = message_data.get("message", "")
+            
+            # Agregar contexto de la aplicación al mensaje
+            context_message = f"[App: {app.app_name} | Template: {app.template_id}] {message}"
+            
+            chat_request = {
+                "message": context_message,
+                "session_id": f"{tenant_id}_{app_id}",
+                "context_type": "live_coding"
+            }
+            
+            try:
+                import httpx
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        "http://localhost:8005/chat",
+                        json=chat_request,
+                        timeout=30.0
+                    )
+                    
+                    if response.status_code == 200:
+                        chat_response = response.json()
+                        return {
+                            "app_id": app_id,
+                            "response": chat_response.get("response", ""),
+                            "provider": chat_response.get("provider", ""),
+                            "cost_estimate": chat_response.get("cost_estimate", 0)
+                        }
+                    else:
+                        raise HTTPException(status_code=500, detail="AI chat service unavailable")
+            
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"AI chat failed: {str(e)}")
+        
+        @self.app.get("/v1/apps/{app_id}/preview")
+        async def get_app_preview_info(app_id: str):
+            """Obtener información para preview de la aplicación en live coding"""
+            if app_id not in self.apps:
+                raise HTTPException(status_code=404, detail="App not found")
+            
+            app = self.apps[app_id]
+            
+            if app.status != "ready":
+                return {
+                    "app_id": app_id,
+                    "status": app.status,
+                    "preview_available": False,
+                    "message": f"App is {app.status}, preview not available"
+                }
+            
+            return {
+                "app_id": app_id,
+                "status": app.status,
+                "preview_available": True,
+                "endpoints": app.endpoints,
+                "preview_url": app.endpoints.get("frontend"),
+                "api_url": app.endpoints.get("api"),
+                "last_updated": app.build_logs[-1] if app.build_logs else None
+            }
     
     async def _create_app_background(self, app_id: str, request: AppCreateRequest):
         """Crear app en background con código REAL"""

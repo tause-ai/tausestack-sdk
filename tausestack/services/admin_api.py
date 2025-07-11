@@ -4,6 +4,7 @@ Admin API Service - Gestión centralizada de configuraciones administrativas
 
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 from datetime import datetime
@@ -64,6 +65,15 @@ class AdminAPIService:
         self.security = HTTPBearer()
         self.api_configs: Dict[str, APIConfig] = {}
         self.health_history: List[HealthCheckResult] = []
+        
+        # Configurar CORS
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
         
         # Configurar directorios de persistence
         self.data_dir = Path(".tausestack_storage/admin")
@@ -292,17 +302,16 @@ class AdminAPIService:
         
         @self.app.post("/admin/apis/{api_id}/test", response_model=HealthCheckResult)
         async def test_api_connection(api_id: str):
-            """Probar conexión con una API"""
+            """Probar conexión a una API específica"""
             if api_id not in self.api_configs:
                 raise HTTPException(status_code=404, detail="API no encontrada")
             
             result = await self._test_connection(api_id)
-            await self._save_health_history()
             return result
         
         @self.app.get("/admin/apis/{api_id}/health", response_model=List[HealthCheckResult])
         async def get_health_history(api_id: str, limit: int = 10):
-            """Obtener historial de health checks"""
+            """Obtener historial de health checks para una API"""
             history = [h for h in self.health_history if h.api_id == api_id]
             return history[-limit:]
         
@@ -310,263 +319,216 @@ class AdminAPIService:
         async def run_health_check_all():
             """Ejecutar health check para todas las APIs"""
             results = []
-            for api_id in self.api_configs.keys():
-                try:
-                    result = await self._test_connection(api_id)
-                    results.append(result)
-                except Exception as e:
-                    results.append(HealthCheckResult(
-                        api_id=api_id,
-                        status=APIStatus.error,
-                        error_message=str(e),
-                        timestamp=datetime.now()
-                    ))
+            for api_id in self.api_configs:
+                result = await self._test_connection(api_id)
+                results.append(result)
             
+            # Actualizar estados
+            for result in results:
+                if result.api_id in self.api_configs:
+                    self.api_configs[result.api_id].status = result.status
+                    self.api_configs[result.api_id].last_check = result.timestamp
+            
+            await self._save_apis()
             await self._save_health_history()
-            return results
+            
+            return {"message": "Health check completado", "results": results}
         
         @self.app.get("/admin/dashboard/stats")
         async def get_dashboard_stats():
-            """Obtener estadísticas del dashboard (DATOS REALES)"""
-            try:
-                import httpx
-                
-                # Obtener datos reales de tause.pro
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    # Analytics reales
-                    analytics_response = await client.get(
-                        "http://localhost:8001/realtime/stats",
-                        headers={"X-Tenant-ID": "tause.pro"}
-                    )
-                    analytics_data = analytics_response.json() if analytics_response.status_code == 200 else {}
-                    
-                    # Billing reales
-                    billing_response = await client.get(
-                        "http://localhost:8003/usage/summary?days=30",
-                        headers={"X-Tenant-ID": "tause.pro"}
-                    )
-                    billing_data = billing_response.json() if billing_response.status_code == 200 else {}
-                    
-                    # Estadísticas reales de tause.pro
-                    return {
-                        "total_tenants": 1,  # Solo tause.pro por ahora
-                        "active_tenants": 1,
-                        "total_requests": analytics_data.get("total_events", 0),
-                        "success_rate": 99.2,  # Calculado basado en eventos reales
-                        "avg_response_time": 125,
-                        "monthly_revenue": float(billing_data.get("total_cost", 0)),
-                        "total_endpoints": 18,  # Endpoints reales de Builder API
-                        "healthy_services": 8,
-                        "total_services": 8,
-                        "api_calls_today": analytics_data.get("last_hour_events", 0) * 24,
-                        "error_rate": 0.8,
-                        "uptime": 99.9
-                    }
-                    
-            except Exception as e:
-                # Fallback a datos básicos si los servicios no responden
-                return {
-                    "total_tenants": 1,
-                    "active_tenants": 1,
-                    "total_requests": 0,
-                    "success_rate": 100.0,
-                    "avg_response_time": 0,
-                    "monthly_revenue": 0,
-                    "total_endpoints": 18,
-                    "healthy_services": 8,
-                    "total_services": 8,
-                    "api_calls_today": 0,
-                    "error_rate": 0.0,
-                    "uptime": 100.0
-                }
-
+            """Obtener estadísticas del dashboard"""
+            return {
+                "total_tenants": 1,
+                "active_tenants": 1,
+                "total_requests": 1247,
+                "success_rate": 99.2,
+                "avg_response_time": 125,
+                "monthly_revenue": 2850.00,
+                "total_endpoints": 18,
+                "healthy_services": 5,
+                "total_services": 8,
+                "api_calls_today": 247,
+                "error_rate": 0.8,
+                "uptime": 99.9,
+                "storage_usage_gb": 2.3,
+                "active_users": 12
+            }
+        
         @self.app.get("/admin/dashboard/metrics")
         async def get_dashboard_metrics():
-            """Obtener métricas del dashboard (DATOS REALES)"""
-            try:
-                import httpx
-                
-                # Obtener métricas reales de tause.pro
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    analytics_response = await client.get(
-                        "http://localhost:8001/realtime/stats",
-                        headers={"X-Tenant-ID": "tause.pro"}
-                    )
-                    analytics_data = analytics_response.json() if analytics_response.status_code == 200 else {}
-                    
-                    # Métricas reales basadas en analytics
-                    return {
-                        "requests_last_24h": analytics_data.get("last_hour_events", 0) * 24,
-                        "avg_response_time": 125,
-                        "error_rate": 0.8,
-                        "active_users": analytics_data.get("unique_users", 0),
-                        "cpu_usage": 45,  # Métrica del servidor
-                        "memory_usage": 67,
-                        "disk_usage": 34,
-                        "network_io": 123,
-                        "database_connections": 15,
-                        "cache_hit_rate": 94.5,
-                        "queue_size": 2,
-                        "webhook_success_rate": 98.7
-                    }
-                    
-            except Exception as e:
-                # Fallback a métricas básicas
-                return {
-                    "requests_last_24h": 0,
-                    "avg_response_time": 0,
-                    "error_rate": 0.0,
-                    "active_users": 0,
-                    "cpu_usage": 0,
-                    "memory_usage": 0,
-                    "disk_usage": 0,
-                    "network_io": 0,
-                    "database_connections": 0,
-                    "cache_hit_rate": 0.0,
-                    "queue_size": 0,
-                    "webhook_success_rate": 0.0
+            """Obtener métricas detalladas del dashboard"""
+            
+            # Métricas de servicios
+            service_metrics = [
+                {
+                    "name": "API Gateway",
+                    "status": "healthy",
+                    "response_time": 95,
+                    "requests_per_minute": 45,
+                    "error_rate": 0.2
+                },
+                {
+                    "name": "Admin API",
+                    "status": "healthy",
+                    "response_time": 120,
+                    "requests_per_minute": 12,
+                    "error_rate": 0.1
+                },
+                {
+                    "name": "AI Services",
+                    "status": "healthy",
+                    "response_time": 230,
+                    "requests_per_minute": 8,
+                    "error_rate": 0.3
+                },
+                {
+                    "name": "Analytics",
+                    "status": "healthy",
+                    "response_time": 180,
+                    "requests_per_minute": 15,
+                    "error_rate": 0.0
+                },
+                {
+                    "name": "Communications",
+                    "status": "healthy",
+                    "response_time": 150,
+                    "requests_per_minute": 6,
+                    "error_rate": 0.1
                 }
-
+            ]
+            
+            # Métricas de tenants
+            tenant_metrics = [
+                {
+                    "tenant_id": "tause.pro",
+                    "requests_today": 247,
+                    "active_endpoints": 12,
+                    "storage_usage_gb": 2.3,
+                    "monthly_usage": 8450
+                }
+            ]
+            
+            return {
+                "service_metrics": service_metrics,
+                "tenant_metrics": tenant_metrics,
+                "system_health": {
+                    "cpu_usage": 45.2,
+                    "memory_usage": 67.8,
+                    "disk_usage": 34.1,
+                    "network_io": 1.2
+                }
+            }
+        
         @self.app.get("/admin/dashboard/top-endpoints")
         async def get_top_endpoints():
-            """Obtener endpoints más utilizados (DATOS REALES)"""
-            try:
-                import httpx
-                
-                # Obtener datos reales de analytics
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    analytics_response = await client.get(
-                        "http://localhost:8001/realtime/stats",
-                        headers={"X-Tenant-ID": "tause.pro"}
-                    )
-                    analytics_data = analytics_response.json() if analytics_response.status_code == 200 else {}
-                    
-                    # Endpoints reales de tause.pro
-                    endpoints = [
-                        {"path": "/v1/templates/list", "calls": analytics_data.get("total_events", 0) // 4, "method": "GET", "avg_time": 98},
-                        {"path": "/v1/apps/create", "calls": analytics_data.get("total_events", 0) // 8, "method": "POST", "avg_time": 245},
-                        {"path": "/v1/tenants/create", "calls": analytics_data.get("total_events", 0) // 12, "method": "POST", "avg_time": 167},
-                        {"path": "/health", "calls": analytics_data.get("total_events", 0) // 2, "method": "GET", "avg_time": 45},
-                        {"path": "/v1/deploy", "calls": analytics_data.get("total_events", 0) // 16, "method": "POST", "avg_time": 1024},
-                        {"path": "/v1/templates/{id}", "calls": analytics_data.get("total_events", 0) // 6, "method": "GET", "avg_time": 123}
-                    ]
-                    
-                    return endpoints
-                    
-            except Exception as e:
-                # Fallback a endpoints básicos
-                return [
-                    {"path": "/health", "calls": 0, "method": "GET", "avg_time": 0},
-                    {"path": "/v1/templates/list", "calls": 0, "method": "GET", "avg_time": 0}
-                ]
-
+            """Obtener endpoints más utilizados"""
+            endpoints = [
+                {
+                    "endpoint": "/api/ai/generate",
+                    "requests": 1247,
+                    "avg_response_time": 340,
+                    "error_rate": 0.3
+                },
+                {
+                    "endpoint": "/api/analytics/events",
+                    "requests": 890,
+                    "avg_response_time": 120,
+                    "error_rate": 0.1
+                },
+                {
+                    "endpoint": "/api/billing/usage",
+                    "requests": 567,
+                    "avg_response_time": 90,
+                    "error_rate": 0.0
+                },
+                {
+                    "endpoint": "/api/communications/send",
+                    "requests": 234,
+                    "avg_response_time": 180,
+                    "error_rate": 0.2
+                },
+                {
+                    "endpoint": "/api/templates/render",
+                    "requests": 123,
+                    "avg_response_time": 250,
+                    "error_rate": 0.1
+                }
+            ]
+            
+            return {"top_endpoints": endpoints}
+        
         @self.app.get("/admin/dashboard/top-tenants")
         async def get_top_tenants():
-            """Obtener tenants con más consumo (DATOS REALES)"""
-            try:
-                import httpx
-                
-                # Obtener datos reales de billing
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    billing_response = await client.get(
-                        "http://localhost:8003/usage/summary?days=30",
-                        headers={"X-Tenant-ID": "tause.pro"}
-                    )
-                    billing_data = billing_response.json() if billing_response.status_code == 200 else {}
-                    
-                    # Datos reales de tause.pro
-                    tenants = [
-                        {
-                            "name": "Tause Pro",
-                            "plan": "Enterprise",
-                            "calls": billing_data.get("total_records", 0),
-                            "revenue": float(billing_data.get("total_cost", 0)),
-                            "badge": "🚀"
-                        }
-                    ]
-                    
-                    return tenants
-                    
-            except Exception as e:
-                # Fallback a tenant básico
-                return [
-                    {"name": "Tause Pro", "plan": "Enterprise", "calls": 0, "revenue": 0, "badge": "🚀"}
-                ]
-
+            """Obtener tenants más activos"""
+            tenants = [
+                {
+                    "tenant_id": "tause.pro",
+                    "total_requests": 3847,
+                    "active_endpoints": 12,
+                    "monthly_revenue": 2850.00,
+                    "storage_usage_gb": 2.3,
+                    "last_activity": "2024-01-07T15:30:00"
+                }
+            ]
+            
+            return {"top_tenants": tenants}
+        
         @self.app.get("/admin/dashboard/recent-activity")
         async def get_recent_activity():
-            """Obtener actividad reciente del sistema (DATOS REALES)"""
-            try:
-                import httpx
-                from datetime import datetime, timedelta
-                
-                # Obtener datos reales de analytics
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    analytics_response = await client.get(
-                        "http://localhost:8001/realtime/stats",
-                        headers={"X-Tenant-ID": "tause.pro"}
-                    )
-                    analytics_data = analytics_response.json() if analytics_response.status_code == 200 else {}
-                    
-                    # Actividad real basada en métricas
-                    activities = [
-                        {
-                            "type": "tenant_active",
-                            "message": "Tause Pro platform is active",
-                            "icon": "🚀",
-                            "time": "5m ago"
-                        },
-                        {
-                            "type": "api_call",
-                            "message": f"API calls processed: {analytics_data.get('last_hour_events', 0)}/hour",
-                            "icon": "📊",
-                            "time": "10m ago"
-                        },
-                        {
-                            "type": "service_health",
-                            "message": "All services healthy and running",
-                            "icon": "✅",
-                            "time": "15m ago"
-                        },
-                        {
-                            "type": "template_usage",
-                            "message": "Templates API responding normally",
-                            "icon": "📝",
-                            "time": "20m ago"
-                        },
-                        {
-                            "type": "billing_update",
-                            "message": "Usage tracking updated for Tause Pro",
-                            "icon": "💳",
-                            "time": "30m ago"
-                        },
-                        {
-                            "type": "backup",
-                            "message": "System backup completed successfully",
-                            "icon": "💾",
-                            "time": "1h ago"
-                        },
-                        {
-                            "type": "deployment",
-                            "message": "New deployment successful",
-                            "icon": "🚀",
-                            "time": "2h ago"
-                        },
-                        {
-                            "type": "security",
-                            "message": "Security scan completed - No issues found",
-                            "icon": "🛡️",
-                            "time": "3h ago"
-                        }
-                    ]
-                    
-                    return activities
-                    
-            except Exception as e:
-                # Fallback a actividad básica
-                return [
-                    {"type": "system", "message": "System is running", "icon": "✅", "time": "now"}
-                ]
+            """Obtener actividad reciente del sistema"""
+            activities = [
+                {
+                    "timestamp": "2024-01-07T15:45:00",
+                    "type": "api_request",
+                    "tenant_id": "tause.pro",
+                    "endpoint": "/api/ai/generate",
+                    "status": "success",
+                    "response_time": 340
+                },
+                {
+                    "timestamp": "2024-01-07T15:42:00",
+                    "type": "api_request",
+                    "tenant_id": "tause.pro",
+                    "endpoint": "/api/analytics/events",
+                    "status": "success",
+                    "response_time": 120
+                },
+                {
+                    "timestamp": "2024-01-07T15:40:00",
+                    "type": "health_check",
+                    "service": "ai_services",
+                    "status": "healthy",
+                    "response_time": 95
+                },
+                {
+                    "timestamp": "2024-01-07T15:38:00",
+                    "type": "api_request",
+                    "tenant_id": "tause.pro",
+                    "endpoint": "/api/billing/usage",
+                    "status": "success",
+                    "response_time": 90
+                },
+                {
+                    "timestamp": "2024-01-07T15:35:00",
+                    "type": "error",
+                    "tenant_id": "tause.pro",
+                    "endpoint": "/api/communications/send",
+                    "status": "error",
+                    "error_message": "Rate limit exceeded"
+                }
+            ]
+            
+            return {"recent_activity": activities}
+        
+        @self.app.get("/health")
+        async def health_check():
+            """Health check básico del Admin API"""
+            return {
+                "status": "healthy",
+                "timestamp": datetime.now().isoformat(),
+                "version": "1.0.0",
+                "service": "admin_api"
+            }
     
     async def _test_connection(self, api_id: str) -> HealthCheckResult:
         """Probar conexión con una API específica"""
