@@ -1,0 +1,35 @@
+# CONSTRAINTS ABSOLUTOS - NUNCA VIOLAR
+
+## CÓDIGO EXISTENTE FUNCIONANDO - NO TOCAR
+- tausestack/services/mcp_server_api.py - ✅ FUNCIONANDO - NO MODIFICAR
+- tausestack/services/mcp_client/ - ✅ FUNCIONANDO - NO MODIFICAR  
+- examples/mcp_*.py - ✅ FUNCIONANDO - NO MODIFICAR
+- examples/ai_integration_demo.py - ✅ FUNCIONANDO - NO MODIFICAR
+- examples/multitenant_services_demo.py - ✅ FUNCIONANDO - NO MODIFICAR
+
+## ANTES DE CUALQUIER CAMBIO
+1. PREGUNTA: "¿Este archivo ya funciona?"
+2. SI SÍ: NO LO MODIFIQUES, CRÉA NUEVO ARCHIVO
+3. Si necesitas extender: CREA WRAPPER O EXTENSIÓN
+4. NUNCA reescribas código funcionando
+
+## PATRONES ESTABLECIDOS (USAR, NO RECREAR)
+- Multi-tenant: tenant_id ya implementado
+- MCP Server: ya funciona en mcp_server_api.py
+- MCP Client: ya funciona en mcp_client/
+- Ejemplos: ya funcionan, usar como referencia
+
+## RESPUESTA OBLIGATORIA
+Antes de cualquier implementación, responde:
+1. "Archivo objetivo: [nombre]"
+2. "¿Ya existe y funciona? [SÍ/NO]"
+3. "Si SÍ: ¿Por qué no usar el existente?"
+4. "Alternativa: [crear nuevo archivo/wrapper/extensión]"
+5. [Implementación]
+
+## FORBIDDEN ACTIONS
+- Reescribir mcp_server_api.py (YA FUNCIONA)
+- Reescribir mcp_client/ (YA FUNCIONA)
+- Modificar ejemplos sin permiso explícito
+- Crear funcionalidad que ya existe
+- Ignorar código existente funcionando

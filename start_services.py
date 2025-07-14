@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Script para arrancar todos los servicios de TauseStack en producción
+Script para arrancar TauseStack en producción
+Usando los módulos exactos que funcionan localmente
 """
 
 import subprocess
@@ -16,6 +17,7 @@ processes = []
 
 def cleanup():
     """Limpia procesos al salir"""
+    print("\n⏹️  Deteniendo servicios...")
     for process in processes:
         try:
             process.terminate()
@@ -28,32 +30,50 @@ def cleanup():
 
 def signal_handler(signum, frame):
     """Manejador de señales"""
-    print("\n⏹️  Deteniendo servicios...")
     cleanup()
     sys.exit(0)
 
-def start_service(service_name, module_path, port):
-    """Inicia un servicio específico"""
+def start_builder_api():
+    """Inicia Builder API con factory (como localmente)"""
     cmd = [
         sys.executable, "-m", "uvicorn",
-        module_path,
+        "tausestack.services.builder_api:create_builder_api_app",
         "--host", "0.0.0.0",
-        "--port", str(port),
+        "--port", "8006",
+        "--factory",
         "--log-level", "info"
     ]
     
-    print(f"🚀 Iniciando {service_name} en puerto {port}...")
-    
+    print("🚀 Iniciando Builder API en puerto 8006...")
     try:
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen(cmd)
         processes.append(process)
         return process
     except Exception as e:
-        print(f"❌ Error iniciando {service_name}: {e}")
+        print(f"❌ Error iniciando Builder API: {e}")
+        return None
+
+def start_api_gateway():
+    """Inicia API Gateway (como localmente)"""
+    cmd = [
+        sys.executable, "-m", "uvicorn",
+        "tausestack.services.api_gateway:app",
+        "--host", "0.0.0.0",
+        "--port", "8000",
+        "--log-level", "info"
+    ]
+    
+    print("🚀 Iniciando API Gateway en puerto 8000...")
+    try:
+        process = subprocess.Popen(cmd)
+        processes.append(process)
+        return process
+    except Exception as e:
+        print(f"❌ Error iniciando API Gateway: {e}")
         return None
 
 def main():
-    """Función principal para arrancar todos los servicios"""
+    """Función principal - exactamente como funciona localmente"""
     
     # Registrar manejadores de señales
     signal.signal(signal.SIGINT, signal_handler)
@@ -67,49 +87,34 @@ def main():
     print("🚀 Iniciando TauseStack Production Services...")
     print("=" * 50)
     
-    # Configuración de servicios
-    services = [
-        ("API Gateway", "tausestack.services.api_gateway:app", 8000),
-        ("Analytics", "tausestack.services.analytics.api.main:app", 8001),
-        ("Communications", "tausestack.services.communications.api.main:app", 8002),
-        ("Billing", "tausestack.services.billing.api.main:app", 8003),
-        ("Templates", "tausestack.services.templates.api.main:app", 8004),
-        ("AI Services", "tausestack.services.ai_services.api.main:app", 8005),
-        ("Builder API", "tausestack.services.builder_api:app", 8006),
-        ("Agent Team API", "tausestack.services.agent_team_api:app", 8007),
-        ("Admin API", "tausestack.services.admin_api:app", 8008),
-    ]
+    # 1. Iniciar Builder API primero (dependencia del API Gateway)
+    builder_process = start_builder_api()
+    if not builder_process:
+        print("❌ Error crítico: Builder API no pudo iniciarse")
+        sys.exit(1)
     
-    # Mostrar servicios a iniciar
-    print("📋 Servicios a iniciar:")
-    for name, _, port in services:
-        print(f"   • {name}: http://0.0.0.0:{port}")
+    # Esperar un poco para que Builder API arranque
+    print("⏳ Esperando Builder API...")
+    time.sleep(10)
     
-    print("\n🔥 Iniciando servicios...")
-    print("=" * 50)
+    # 2. Iniciar API Gateway
+    gateway_process = start_api_gateway()
+    if not gateway_process:
+        print("❌ Error crítico: API Gateway no pudo iniciarse")
+        sys.exit(1)
     
-    # Iniciar cada servicio
-    for service_name, module_path, port in services:
-        process = start_service(service_name, module_path, port)
-        if process:
-            time.sleep(1)  # Esperar un segundo entre servicios
+    print("✅ Servicios iniciados:")
+    print("   • Builder API: http://0.0.0.0:8006")
+    print("   • API Gateway + Frontend: http://0.0.0.0:8000")
+    print("   • Health Check: http://0.0.0.0:8000/health")
     
-    print(f"\n✅ {len(processes)} servicios iniciados")
-    print("🌍 API Gateway disponible en: http://0.0.0.0:8000")
-    print("📚 Documentación: http://0.0.0.0:8000/docs")
-    
-    # Mantener el proceso principal vivo y monitorear servicios
+    # Mantener el proceso principal vivo
     try:
         while True:
-            # Verificar si algún servicio ha terminado
-            for i, process in enumerate(processes):
-                if process.poll() is not None:
-                    print(f"⚠️  Servicio {i+1} terminó unexpectadamente")
-            
-            time.sleep(5)
-    except KeyboardInterrupt:
-        signal_handler(signal.SIGINT, None)
-
+            time.sleep(1)
+    except Exception as e:
+        print(f"❌ Error en el proceso principal: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main() 

@@ -1,6 +1,6 @@
 {
     "taskDefinition": {
-        "taskDefinitionArn": "arn:aws:ecs:us-east-1:349622182214:task-definition/tausestack-final-fixed-task:3",
+        "taskDefinitionArn": "arn:aws:ecs:us-east-1:349622182214:task-definition/tausestack-final-fixed-task:6",
         "containerDefinitions": [
             {
                 "name": "tausestack",
@@ -45,6 +45,10 @@
                     {
                         "name": "WORKERS",
                         "value": "2"
+                    },
+                    {
+                        "name": "TAUSESTACK_BASE_DOMAIN",
+                        "value": "tausestack.dev"
                     },
                     {
                         "name": "ENVIRONMENT",
@@ -100,7 +104,7 @@
         "taskRoleArn": "arn:aws:iam::349622182214:role/tausestack-final-fixed-ECSTaskRole-SRkpjerDcREB",
         "executionRoleArn": "arn:aws:iam::349622182214:role/tausestack-final-fixed-ECSExecutionRole-9hU45Pqfkrbj",
         "networkMode": "awsvpc",
-        "revision": 3,
+        "revision": 6,
         "volumes": [],
         "status": "ACTIVE",
         "requiresAttributes": [
@@ -148,7 +152,7 @@
         ],
         "cpu": "512",
         "memory": "1024",
-        "registeredAt": "2025-07-09T12:54:41.373000-05:00",
+        "registeredAt": "2025-07-09T14:36:40.308000-05:00",
         "registeredBy": "arn:aws:iam::349622182214:user/tausestack-deploy"
     },
     "tags": []
