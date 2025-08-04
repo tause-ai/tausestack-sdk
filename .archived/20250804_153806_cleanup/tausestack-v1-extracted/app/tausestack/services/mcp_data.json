@@ -1,0 +1,23 @@
+{
+  "agent_memories": {
+    "workflow_manager": {
+      "agent_id": "workflow_manager",
+      "context": {
+        "workflow_id": "dist_wf_001",
+        "status": "started",
+        "remote_tool_used": true,
+        "tools_used": [
+          "remote_tool_1"
+        ]
+      }
+    }
+  },
+  "tools": {
+    "remote_tool_1": {
+      "tool_id": "remote_tool_1",
+      "name": "Remote Analysis",
+      "description": "Herramienta remota de an\u00e1lisis",
+      "config": {}
+    }
+  }
+}

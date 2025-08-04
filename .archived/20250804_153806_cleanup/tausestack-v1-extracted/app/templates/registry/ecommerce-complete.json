@@ -1,0 +1,170 @@
+{
+  "id": "ecommerce-complete",
+  "metadata": {
+    "name": "Complete E-commerce",
+    "description": "E-commerce completo con todas las funcionalidades",
+    "version": "1.0.0",
+    "author": "TauseStack Team",
+    "tags": [
+      "ecommerce",
+      "store",
+      "shadcn",
+      "complete"
+    ],
+    "category": "ecommerce",
+    "subcategory": null,
+    "preview_image": null,
+    "demo_url": null,
+    "documentation_url": null,
+    "created_at": "2025-07-01T16:36:31.984275",
+    "updated_at": "2025-07-01T16:36:31.984275"
+  },
+  "configuration": {
+    "framework": "nextjs",
+    "ui_library": "shadcn",
+    "typescript": true,
+    "tailwind": true,
+    "dark_mode": true,
+    "responsive": true,
+    "pwa": false,
+    "seo_optimized": true
+  },
+  "dependencies": {
+    "npm_packages": [
+      "stripe",
+      "next-auth",
+      "zustand"
+    ],
+    "python_packages": [],
+    "shadcn_components": [
+      "card",
+      "button",
+      "badge",
+      "dialog",
+      "sheet",
+      "select",
+      "input"
+    ],
+    "external_apis": []
+  },
+  "pages": [
+    {
+      "name": "home",
+      "path": "/",
+      "components": [
+        {
+          "id": "hero-section",
+          "type": "hero",
+          "variant": "default",
+          "props": {
+            "title": "Discover Amazing Products",
+            "subtitle": "Shop the best selection with unbeatable prices",
+            "cta": "Shop Now"
+          },
+          "styles": {},
+          "children": [],
+          "conditional_rendering": null,
+          "data_binding": null
+        },
+        {
+          "id": "featured-products",
+          "type": "grid",
+          "variant": "default",
+          "props": {
+            "className": "grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          },
+          "styles": {},
+          "children": [
+            {
+              "id": "product-card-1",
+              "type": "card",
+              "variant": "default",
+              "props": {
+                "title": "Premium Headphones",
+                "price": "$299.99",
+                "image": "/products/headphones.jpg",
+                "rating": 4.8
+              },
+              "styles": {},
+              "children": [],
+              "conditional_rendering": null,
+              "data_binding": null
+            }
+          ],
+          "conditional_rendering": null,
+          "data_binding": null
+        }
+      ],
+      "layout": "default",
+      "metadata": {},
+      "auth_required": false
+    },
+    {
+      "name": "products",
+      "path": "/products",
+      "components": [
+        {
+          "id": "filters-sidebar",
+          "type": "sidebar",
+          "variant": "default",
+          "props": {},
+          "styles": {},
+          "children": [
+            {
+              "id": "category-filter",
+              "type": "select",
+              "variant": "default",
+              "props": {
+                "placeholder": "Select Category"
+              },
+              "styles": {},
+              "children": [],
+              "conditional_rendering": null,
+              "data_binding": null
+            },
+            {
+              "id": "price-filter",
+              "type": "select",
+              "variant": "default",
+              "props": {
+                "placeholder": "Price Range"
+              },
+              "styles": {},
+              "children": [],
+              "conditional_rendering": null,
+              "data_binding": null
+            }
+          ],
+          "conditional_rendering": null,
+          "data_binding": null
+        },
+        {
+          "id": "products-grid",
+          "type": "grid",
+          "variant": "default",
+          "props": {
+            "className": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"
+          },
+          "styles": {},
+          "children": [],
+          "conditional_rendering": null,
+          "data_binding": null
+        }
+      ],
+      "layout": "default",
+      "metadata": {},
+      "auth_required": false
+    }
+  ],
+  "components": [],
+  "theme": {
+    "primary": "#059669",
+    "secondary": "#10b981",
+    "accent": "#34d399",
+    "background": "#ffffff",
+    "foreground": "#0f172a"
+  },
+  "environment_variables": [],
+  "database_schema": null,
+  "api_routes": []
+}

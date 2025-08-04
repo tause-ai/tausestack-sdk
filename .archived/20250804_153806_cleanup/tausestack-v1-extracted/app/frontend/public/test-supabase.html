@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Supabase - TauseStack</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 50px auto; 
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background: #4f46e5;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover {
+            background: #3730a3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+            color: #065f46;
+        }
+        .error {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #991b1b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Test de Autenticación Supabase</h1>
+        <p>Prueba directa de login con Supabase</p>
+        
+        <input type="email" id="email" placeholder="Email" value="felipe@tause.co">
+        <input type="password" id="password" placeholder="Password" value="test123456">
+        <button onclick="testLogin()">🚀 Probar Login</button>
+        <button onclick="testConnection()">🔗 Probar Conexión</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // Configuración de Supabase
+        const supabaseUrl = 'https://vjoxmprmcbkmhwmbniaz.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqb3htcHJtY2JrbWh3bWJuaWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1NzM4NzQsImV4cCI6MjA2NzE0OTg3NH0.bY4FrlKtDK2TnMt7hOC5_KpIuoHwqJLOYkB-bWs_Wd8';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        function showResult(message, isError = false) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = `result ${isError ? 'error' : 'success'}`;
+        }
+        
+        async function testConnection() {
+            showResult('🔄 Probando conexión...');
+            
+            try {
+                const { data, error } = await supabase.from('tenants').select('count');
+                
+                if (error) {
+                    showResult(`❌ Error de conexión:\n${error.message}`, true);
+                } else {
+                    showResult(`✅ Conexión exitosa!\nRespuesta: ${JSON.stringify(data, null, 2)}`);
+                }
+            } catch (err) {
+                showResult(`❌ Error general:\n${err.message}`, true);
+            }
+        }
+        
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            showResult('🔄 Intentando login...');
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) {
+                    showResult(`❌ Error de login:\n${error.message}`, true);
+                } else {
+                    showResult(`✅ ¡Login exitoso!\n\nUsuario: ${data.user.email}\nID: ${data.user.id}\nConfirmado: ${data.user.email_confirmed_at ? 'Sí' : 'No'}\n\nToken: ${data.session.access_token.substring(0, 50)}...`);
+                }
+            } catch (err) {
+                showResult(`❌ Error general:\n${err.message}`, true);
+            }
+        }
+        
+        // Test automático al cargar
+        window.onload = function() {
+            console.log('🚀 TauseStack Supabase Test cargado');
+            testConnection();
+        };
+    </script>
+</body>
+</html> 

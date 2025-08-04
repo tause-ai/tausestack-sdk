@@ -1,0 +1,40 @@
+{
+  "advanced-dashboard": {
+    "name": "Advanced Dashboard",
+    "description": "Dashboard avanzado con múltiples componentes shadcn/ui",
+    "version": "1.0.0",
+    "author": "TauseStack Team",
+    "tags": [
+      "dashboard",
+      "analytics",
+      "shadcn",
+      "advanced"
+    ],
+    "category": "dashboard",
+    "subcategory": null,
+    "preview_image": null,
+    "demo_url": null,
+    "documentation_url": null,
+    "created_at": "2025-07-01T16:36:31.980756",
+    "updated_at": "2025-07-01T16:36:31.980756"
+  },
+  "ecommerce-complete": {
+    "name": "Complete E-commerce",
+    "description": "E-commerce completo con todas las funcionalidades",
+    "version": "1.0.0",
+    "author": "TauseStack Team",
+    "tags": [
+      "ecommerce",
+      "store",
+      "shadcn",
+      "complete"
+    ],
+    "category": "ecommerce",
+    "subcategory": null,
+    "preview_image": null,
+    "demo_url": null,
+    "documentation_url": null,
+    "created_at": "2025-07-01T16:36:31.984275",
+    "updated_at": "2025-07-01T16:36:31.984275"
+  }
+}
