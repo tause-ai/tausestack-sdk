@@ -7,12 +7,24 @@ from typing import List, Optional, Dict, Any
 import json
 from pathlib import Path
 
-from ..schemas.template_schema import (
-    TemplateSchema, TemplateGenerationRequest, TemplateGenerationResponse,
-    TemplateMetadata, TemplateCategory, ComponentType
-)
-from ..core.engine import TemplateEngine
-from ..storage.template_loader import TemplateRegistry
+try:
+    from ..schemas.template_schema import (
+        TemplateSchema, TemplateGenerationRequest, TemplateGenerationResponse,
+        TemplateMetadata, TemplateCategory, ComponentType
+    )
+    from ..core.engine import TemplateEngine
+    from ..storage.template_loader import TemplateRegistry
+except ImportError:
+    # Fallback para imports relativos
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    from schemas.template_schema import (
+        TemplateSchema, TemplateGenerationRequest, TemplateGenerationResponse,
+        TemplateMetadata, TemplateCategory, ComponentType
+    )
+    from core.engine import TemplateEngine
+    from storage.template_loader import TemplateRegistry
 
 app = FastAPI(
     title="TauseStack Template Engine",
