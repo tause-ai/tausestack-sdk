@@ -48,31 +48,31 @@ logger = logging.getLogger(__name__)
 # Configuración de servicios usando configuración centralizada
 SERVICES_CONFIG = {
     "analytics": {
-        "url": settings.ANALYTICS_SERVICE_URL,
+        "url": "http://localhost:8010",  # Puerto actualizado
         "health_endpoint": "/health",
         "rate_limit": 1000,  # requests per hour per tenant
         "timeout": 30
     },
     "communications": {
-        "url": settings.COMMUNICATIONS_SERVICE_URL, 
+        "url": "http://localhost:8011",  # Puerto actualizado
         "health_endpoint": "/health",
         "rate_limit": 500,
         "timeout": 30
     },
     "billing": {
-        "url": settings.BILLING_SERVICE_URL,
+        "url": "http://localhost:8012",  # Puerto actualizado
         "health_endpoint": "/health", 
         "rate_limit": 200,
         "timeout": 30
     },
     "templates": {
-        "url": "http://localhost:8004",
+        "url": "http://localhost:8013",  # Puerto actualizado
         "health_endpoint": "/health",
         "rate_limit": 100,
         "timeout": 30
     },
     "ai_services": {
-        "url": settings.AI_SERVICES_URL,
+        "url": "http://localhost:8014",  # Puerto actualizado
         "health_endpoint": "/health",
         "rate_limit": 100,
         "timeout": 30
@@ -84,13 +84,13 @@ SERVICES_CONFIG = {
         "timeout": 30
     },
     "team_api": {
-        "url": "http://localhost:8007",
+        "url": "http://localhost:8015",  # Puerto actualizado
         "health_endpoint": "/health",
         "rate_limit": 100,
         "timeout": 30
     },
     "admin_api": {
-        "url": "http://localhost:8008",  # Admin API en puerto propio
+        "url": "http://localhost:9002",  # Admin API en puerto correcto
         "health_endpoint": "/health",
         "rate_limit": 100,
         "timeout": 30
