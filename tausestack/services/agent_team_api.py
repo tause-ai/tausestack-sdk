@@ -210,6 +210,18 @@ class AgentTeamAPIService:
     def _setup_routes(self):
         """Configurar todas las rutas del API"""
         
+        @self.app.get("/health")
+        async def health_check():
+            """Health check del servicio."""
+            return {
+                "status": "healthy",
+                "service": "agent-team-api",
+                "version": "1.0.0",
+                "timestamp": datetime.utcnow().isoformat(),
+                "active_teams": len(self.active_teams),
+                "execution_queue": len(self.execution_queue)
+            }
+
         @self.app.get("/teams", response_model=List[TeamStatusModel])
         async def list_teams():
             """Listar todos los equipos configurados"""

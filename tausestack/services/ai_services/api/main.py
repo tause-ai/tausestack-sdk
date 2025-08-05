@@ -12,14 +12,28 @@ import logging
 from datetime import datetime
 import uuid
 
-from ..core.code_generator import (
-    CodeGenerator, 
-    GenerationRequest, 
-    GenerationResult, 
-    GenerationStrategy,
-    get_code_generator
-)
-from ..core.prompt_engine import PromptType, AIProvider
+try:
+    from ..core.code_generator import (
+        CodeGenerator, 
+        GenerationRequest, 
+        GenerationResult, 
+        GenerationStrategy,
+        get_code_generator
+    )
+    from ..core.prompt_engine import PromptType, AIProvider
+except ImportError:
+    # Fallback para imports relativos
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    from core.code_generator import (
+        CodeGenerator, 
+        GenerationRequest, 
+        GenerationResult, 
+        GenerationStrategy,
+        get_code_generator
+    )
+    from core.prompt_engine import PromptType, AIProvider
 
 
 # Configurar logging
